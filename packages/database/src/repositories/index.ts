@@ -1,0 +1,27 @@
+import { PrismaExperienceRepository } from "./prisma/experience.repository.prisma.js";
+import { PrismaBoatBrandRepository } from "./prisma/boat-brand.repository.prisma.js";
+import { PrismaConversationRepository } from "./prisma/conversation.repository.prisma.js";
+import { PrismaAuthRepository } from "./prisma/auth.repository.prisma.js";
+import { PrismaBoatRepository } from "./prisma/boat.repository.prisma.js";
+import { PrismaOnboardingLookupRepository } from "./prisma/lookup.repository.prisma.js";
+import { PrismaProfileRepository } from "./prisma/profile.repository.prisma.js";
+
+export * from "./auth.repository.js";
+export * from "./boat.repository.js";
+export * from "./lookup.repository.js";
+export * from "./profile.repository.js";
+export * from "./conversation.repository.js";
+export * from "./experience.repository.js";
+export * from "./boat-brand.repository.js";
+
+/**
+ * Default Prisma-backed repository singletons. Swap these (or inject the classes)
+ * to change the persistence layer without touching API services.
+ */
+export const authRepository = new PrismaAuthRepository();
+export const boatRepository = new PrismaBoatRepository();
+export const onboardingLookupRepository = new PrismaOnboardingLookupRepository();
+export const profileRepository = new PrismaProfileRepository();
+export const conversationRepository = new PrismaConversationRepository();
+export const experienceRepository = new PrismaExperienceRepository();
+export const boatBrandRepository = new PrismaBoatBrandRepository();

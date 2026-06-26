@@ -1,0 +1,39 @@
+{
+  "name": "@getyourboat/database",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx seeds/seed.ts",
+    "db:seed:messaging": "tsx seeds/messaging-demo.seed.ts",
+    "convert:boat-brands": "tsx seeds/convert-boat-brands.ts",
+    "seed:boat-brands": "tsx seeds/seed-boat-brands.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "prisma": {
+    "seed": "tsx seeds/seed.ts"
+  },
+  "dependencies": {
+    "@getyourboat/shared": "workspace:*",
+    "@getyourboat/database": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "@prisma/client": "^6.1.0"
+  },
+  "devDependencies": {
+    "@getyourboat/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "xlsx": "^0.18.5"
+  }
+}
