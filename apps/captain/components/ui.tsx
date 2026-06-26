@@ -12,5 +12,6 @@ export {
   Spinner,
   Alert,
   Badge,
+  FormErrorBanner,
   Modal,
 } from "@getyourboat/ui";

@@ -1,11 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { X, type LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, faXmark, type IconDefinition } from "../icons";
 
 export interface BannerProps {
-  icon?: LucideIcon;
+  icon?: IconDefinition;
   title: string;
   description?: string;
   onDismiss?: () => void;
@@ -15,7 +15,7 @@ export interface BannerProps {
 
 /** Dismissible info/tip banner: icon + title + description. */
 export function Banner({
-  icon: Icon,
+  icon,
   title,
   description,
   onDismiss,
@@ -29,8 +29,12 @@ export function Banner({
         className
       )}
     >
-      {Icon ? (
-        <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-hidden />
+      {icon ? (
+        <FontAwesomeIcon
+          icon={icon}
+          className="mt-0.5 shrink-0 text-[18px] text-brand-600"
+          aria-hidden
+        />
       ) : null}
       <div className="flex-1">
         <h3 className="text-body-sm font-semibold text-ink">{title}</h3>
@@ -46,7 +50,7 @@ export function Banner({
           onClick={onDismiss}
           className="rounded p-1 text-gray-400 transition hover:bg-white/60 hover:text-gray-600"
         >
-          <X className="h-4 w-4" />
+          <FontAwesomeIcon icon={faXmark} className="text-[16px]" />
         </button>
       ) : null}
     </div>

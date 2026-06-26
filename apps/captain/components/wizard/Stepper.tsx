@@ -1,59 +1,70 @@
 "use client";
 
-import { cn } from "@getyourboat/ui";
-import { STEP_LABELS, STEP_ORDER, stepIndex } from "../../lib/onboarding";
-import type { OnboardingStep } from "../../lib/types";
+import { cn, FontAwesomeIcon, faCheck, type IconDefinition } from "@getyourboat/ui";
+
+export interface StepperItem {
+  id: string;
+  label: string;
+  icon?: IconDefinition;
+  done: boolean;
+  reachable: boolean;
+}
 
 export function Stepper({
-  current,
-  completed,
+  items,
+  currentId,
   onSelect,
 }: {
-  current: OnboardingStep;
-  completed: OnboardingStep[];
-  onSelect: (step: OnboardingStep) => void;
+  items: StepperItem[];
+  currentId: string;
+  onSelect: (id: string) => void;
 }) {
-  const currentBoatStep = completed.length
-    ? STEP_ORDER.find((s) => !completed.includes(s)) ?? "DOCUMENTS"
-    : "LISTING_MODEL";
-  const furthest = Math.max(stepIndex(currentBoatStep), ...completed.map(stepIndex), 0);
-
   return (
-    <nav className="flex flex-wrap gap-2">
-      {STEP_ORDER.map((step, i) => {
-        const isDone = completed.includes(step);
-        const isActive = step === current;
-        const reachable = i <= furthest;
+    <nav className="flex items-center gap-1 overflow-x-auto pb-1">
+      {items.map((step, i) => {
+        const isActive = step.id === currentId;
         return (
-          <button
-            key={step}
-            disabled={!reachable}
-            onClick={() => reachable && onSelect(step)}
-            className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition",
-              isActive
-                ? "border-brand-600 bg-brand-600 text-white"
-                : isDone
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : reachable
-                    ? "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                    : "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-300"
-            )}
-          >
-            <span
+          <div key={step.id} className="flex shrink-0 items-center">
+            <button
+              type="button"
+              disabled={!step.reachable}
+              onClick={() => step.reachable && onSelect(step.id)}
+              aria-current={isActive ? "step" : undefined}
               className={cn(
-                "flex h-5 w-5 items-center justify-center rounded-full text-[10px]",
+                "flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-[13px] font-medium transition",
                 isActive
-                  ? "bg-white/20"
-                  : isDone
-                    ? "bg-emerald-200 text-emerald-800"
-                    : "bg-slate-100"
+                  ? "text-ink"
+                  : step.reachable
+                    ? "text-gray-500 hover:bg-gray-100/70"
+                    : "cursor-not-allowed text-gray-300"
               )}
             >
-              {isDone ? "✓" : i + 1}
-            </span>
-            {STEP_LABELS[step]}
-          </button>
+              <span
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold transition",
+                  isActive
+                    ? "bg-brand-500 text-white shadow-sm"
+                    : step.done
+                      ? "border border-brand-200 bg-brand-50 text-brand-600"
+                      : step.reachable
+                        ? "border border-gray-200 bg-white text-gray-400"
+                        : "border border-gray-100 bg-gray-50 text-gray-300"
+                )}
+              >
+                {step.icon ? (
+                  <FontAwesomeIcon icon={step.icon} className="text-[14px]" aria-hidden />
+                ) : step.done && !isActive ? (
+                  <FontAwesomeIcon icon={faCheck} className="text-[12px]" aria-hidden />
+                ) : (
+                  i + 1
+                )}
+              </span>
+              <span className="whitespace-nowrap">{step.label}</span>
+            </button>
+            {i < items.length - 1 ? (
+              <span aria-hidden className="mx-1 h-px w-5 shrink-0 bg-gray-200" />
+            ) : null}
+          </div>
         );
       })}
     </nav>

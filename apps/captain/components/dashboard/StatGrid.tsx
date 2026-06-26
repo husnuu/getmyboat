@@ -24,32 +24,32 @@ export function StatGrid({ stats, loading, error }: StatGridProps) {
 
   const cards: { label: string; value: string; accent: StatAccent; hint?: string }[] = [
     {
-      label: "Total Earning",
+      label: "Toplam Kazanç",
       value: stats ? formatMoney(stats.totalEarning.amount, stats.totalEarning.currency) : "—",
       accent: "brand",
     },
     {
-      label: "Availability Awaiting",
+      label: "Onay Bekleyen Müsaitlik",
       value: stats ? String(stats.availabilityAwaiting) : "—",
       accent: "info",
     },
     {
-      label: "Availability Confirmed",
+      label: "Onaylanan Müsaitlik",
       value: stats ? String(stats.availabilityConfirmed) : "—",
       accent: "success",
     },
     {
-      label: "Optioned",
+      label: "Opsiyonlu",
       value: stats ? String(stats.optioned) : "—",
       accent: "warning",
     },
     {
-      label: "Active Boats",
+      label: "Aktif Tekneler",
       value: stats ? String(stats.activeBoats) : "—",
       accent: "ink",
     },
     {
-      label: "Rating",
+      label: "Puan",
       value: stats?.rating.average != null ? stats.rating.average.toFixed(1) : "–",
       accent: "danger",
       hint: stats ? `${stats.rating.count} değerlendirme` : undefined,

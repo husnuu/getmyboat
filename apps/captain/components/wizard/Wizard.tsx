@@ -1,34 +1,60 @@
 "use client";
 
-import { Button, Card, CardContent } from "@getyourboat/ui";
+import {
+  Badge,
+  Button,
+  FontAwesomeIcon,
+  faArrowLeft,
+  faEye,
+  faPaperPlane,
+  faPenToSquare,
+} from "@getyourboat/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "../../lib/api";
+import type { AutosaveStatus } from "../../lib/hooks/useAutosaveDraft";
 import { useBoatWizard } from "../../lib/hooks";
 import {
   STATUS_LABELS,
-  STATUS_STYLES,
+  STEP_LABELS,
   STEP_ORDER,
   stepIndex,
 } from "../../lib/onboarding";
-import type { OnboardingStep, SerializedBoat } from "../../lib/types";
+import type { BoatStatus, OnboardingStep, SerializedBoat } from "../../lib/types";
+import type { FeatureSubTabId } from "@getyourboat/shared";
 import { Alert, Spinner } from "../ui";
-import { Stepper } from "./Stepper";
+import { ListingScorePanel } from "../boats/edit/ListingScorePanel";
+import { AutosaveStatusIndicator } from "./autosave-status";
+import { Stepper, type StepperItem } from "./Stepper";
 import {
   AmenitiesStep,
   BoatTypeFeaturesStep,
   DescriptionRulesStep,
   DocumentsStep,
   ListingModelStep,
+  LocationStep,
+  PreviewStep,
   PricingStep,
   PhotosStep,
   type StepProps,
 } from "./steps";
 
+const PREVIEW_ID = "PREVIEW";
+type WizardStep = OnboardingStep | typeof PREVIEW_ID;
+
+const STATUS_VARIANT: Record<BoatStatus, "neutral" | "warning" | "success" | "danger"> = {
+  DRAFT: "neutral",
+  PENDING_REVIEW: "warning",
+  ACTIVE: "success",
+  REJECTED: "danger",
+  SUSPENDED: "danger",
+};
+
 const STEP_COMPONENTS: Record<OnboardingStep, (p: StepProps) => JSX.Element> = {
   LISTING_MODEL: ListingModelStep,
   BOAT_TYPE_FEATURES: BoatTypeFeaturesStep,
   AMENITIES: AmenitiesStep,
+  LOCATION: LocationStep,
   DESCRIPTION_RULES: DescriptionRulesStep,
   PHOTOS: PhotosStep,
   PRICING: PricingStep,
@@ -37,21 +63,34 @@ const STEP_COMPONENTS: Record<OnboardingStep, (p: StepProps) => JSX.Element> = {
 
 export function Wizard({ boatId }: { boatId: string }) {
   const router = useRouter();
-  const { config, boat, setBoat, error, reload } = useBoatWizard(boatId);
-  const [active, setActive] = useState<OnboardingStep>("LISTING_MODEL");
+  const { config, boat, setBoat, error, loading, reload } = useBoatWizard(boatId);
+  const [active, setActive] = useState<WizardStep>("LISTING_MODEL");
   const [synced, setSynced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [featureSubTab, setFeatureSubTab] = useState<FeatureSubTabId>("specs");
+  const [autosaveStatus, setAutosaveStatus] = useState<AutosaveStatus>("idle");
 
   useEffect(() => {
-    if (boat && !synced) {
-      setActive(boat.progress.currentStep);
+    setSynced(false);
+    setActive("LISTING_MODEL");
+    setSubmitError(null);
+  }, [boatId]);
+
+  useEffect(() => {
+    if (boat?.id === boatId && !synced) {
+      setActive(boat.progress.activeStep ?? boat.progress.currentStep);
       setSynced(true);
     }
-  }, [boat, synced]);
+  }, [boat, boatId, synced]);
+
+  function syncBoat(updated: SerializedBoat) {
+    void setBoat(updated);
+  }
 
   function handleSaved(updated: SerializedBoat) {
-    setBoat(updated);
+    void setBoat(updated);
+    if (active === PREVIEW_ID) return;
     const idx = stepIndex(active);
     const next = STEP_ORDER[Math.min(idx + 1, STEP_ORDER.length - 1)] ?? active;
     setActive(next);
@@ -63,7 +102,7 @@ export function Wizard({ boatId }: { boatId: string }) {
     setSubmitError(null);
     try {
       const updated = await api.submit(boat.id);
-      setBoat(updated);
+      await setBoat(updated);
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Gönderilemedi");
     } finally {
@@ -79,7 +118,7 @@ export function Wizard({ boatId }: { boatId: string }) {
     );
   }
 
-  if (!config || !boat) {
+  if (loading || !config || !boat || boat.id !== boatId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Spinner className="h-6 w-6" />
@@ -87,28 +126,75 @@ export function Wizard({ boatId }: { boatId: string }) {
     );
   }
 
-  const StepComponent = STEP_COMPONENTS[active];
-  const editable = boat.status === "DRAFT" || boat.status === "REJECTED";
-  const idx = stepIndex(active);
+  const isPreview = active === PREVIEW_ID;
+  const canEditSteps =
+    boat.status === "DRAFT" || boat.status === "REJECTED" || boat.status === "ACTIVE";
+  const canSubmit = boat.status === "DRAFT" || boat.status === "REJECTED";
+  const idx = isPreview ? STEP_ORDER.length - 1 : stepIndex(active);
+  const StepComponent = isPreview ? null : STEP_COMPONENTS[active as OnboardingStep];
+
+  const completed = boat.progress.completedSteps;
+  const currentBoatStep = completed.length
+    ? STEP_ORDER.find((s) => !completed.includes(s)) ?? "DOCUMENTS"
+    : "LISTING_MODEL";
+  const furthest = Math.max(
+    stepIndex(currentBoatStep),
+    stepIndex(boat.progress.activeStep ?? boat.progress.currentStep),
+    ...completed.map(stepIndex),
+    0
+  );
+  const stepperItems: StepperItem[] = [
+    ...STEP_ORDER.map((step, i) => ({
+      id: step,
+      label: STEP_LABELS[step],
+      done: completed.includes(step),
+      reachable: i <= furthest,
+    })),
+    { id: PREVIEW_ID, label: "Önizleme", icon: faEye, done: false, reachable: true },
+  ];
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-[1200px] px-4 py-10 sm:px-6">
       <button
-        onClick={() => router.push("/")}
-        className="mb-4 text-sm text-slate-500 hover:text-slate-800"
+        onClick={() => router.push("/boats")}
+        className="mb-5 flex items-center gap-2 text-body-sm font-medium text-gray-500 transition hover:text-ink"
       >
-        ← Teknelerim
+        <FontAwesomeIcon icon={faArrowLeft} className="text-[14px]" aria-hidden />
+        Teknelerim
       </button>
 
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-slate-900">
-          {boat.title || "Yeni Tekne"}
-        </h1>
-        <span
-          className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLES[boat.status]}`}
-        >
-          {STATUS_LABELS[boat.status]}
-        </span>
+      <div className="mb-8 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-caption font-medium uppercase tracking-wide text-gray-400">
+            Tekne düzenle
+          </p>
+          <h1 className="text-[26px] font-bold tracking-tight text-ink">
+            {boat.title || "İsimsiz taslak"}
+          </h1>
+          {canEditSteps ? (
+            <AutosaveStatusIndicator
+              status={autosaveStatus}
+              lastSavedAt={boat.lastSavedAt}
+              className="mt-1"
+            />
+          ) : null}
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/boats/${boat.id}/preview`, "_blank", "noopener,noreferrer")}
+          >
+            <FontAwesomeIcon icon={faEye} className="text-[14px]" aria-hidden />
+            Önizle
+          </Button>
+          <Badge variant={STATUS_VARIANT[boat.status]}>
+            {boat.status === "DRAFT" ? (
+              <FontAwesomeIcon icon={faPenToSquare} className="text-[12px]" aria-hidden />
+            ) : null}
+            {STATUS_LABELS[boat.status]}
+          </Badge>
+        </div>
       </div>
 
       {boat.status === "REJECTED" && boat.rejectionReason ? (
@@ -131,44 +217,73 @@ export function Wizard({ boatId }: { boatId: string }) {
         </div>
       ) : null}
 
-      <div className="mb-6">
-        <Stepper
-          current={active}
-          completed={boat.progress.completedSteps}
-          onSelect={setActive}
-        />
+      <div className="mb-10">
+        <Stepper items={stepperItems} currentId={active} onSelect={(id) => setActive(id as WizardStep)} />
       </div>
 
-      <Card>
-        <CardContent className="py-6">
-          {editable ? (
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0">
+          {isPreview ? (
+            <PreviewStep
+              boat={boat}
+              config={config}
+              onSaved={handleSaved}
+              reload={reload}
+              goBack={() => setActive("DOCUMENTS")}
+            />
+          ) : canEditSteps && StepComponent ? (
             <StepComponent
               boat={boat}
               config={config}
               onSaved={handleSaved}
               reload={reload}
               goBack={() => setActive(STEP_ORDER[Math.max(idx - 1, 0)] ?? active)}
+              syncBoat={syncBoat}
+              onAutosaveStatusChange={setAutosaveStatus}
+              onFeatureSubTabChange={
+                active === "BOAT_TYPE_FEATURES" ? setFeatureSubTab : undefined
+              }
             />
           ) : (
             <p className="text-sm text-slate-500">
               Bu ilan şu an düzenlenemez ({STATUS_LABELS[boat.status]}).
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {editable ? (
-        <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-slate-800">İncelemeye gönder</p>
-              <p className="text-xs text-slate-500">
+        <aside className="order-first lg:order-none">
+          <ListingScorePanel
+            boat={boat}
+            activeStep={isPreview ? "PREVIEW" : (active as OnboardingStep)}
+            featureSubTab={featureSubTab}
+          />
+        </aside>
+      </div>
+
+      {canSubmit ? (
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-md">
+              <p className="text-body-sm font-semibold text-ink">İncelemeye gönder</p>
+              <p className="mt-0.5 text-caption text-gray-500">
                 Tüm zorunlu adımlar tamamlandığında (en az 1 fotoğraf, fiyat ve belge)
                 gönderebilirsin.
               </p>
             </div>
-            <Button disabled={!boat.progress.isReadyForReview || submitting} onClick={submit}>
-              {submitting ? "Gönderiliyor…" : "Gönder"}
+            <Button
+              size="lg"
+              className="sm:shrink-0"
+              disabled={!boat.progress.isReadyForReview || submitting}
+              onClick={submit}
+            >
+              {submitting ? (
+                "Gönderiliyor…"
+              ) : (
+                <>
+                  Gönder
+                  <FontAwesomeIcon icon={faPaperPlane} className="text-[14px]" aria-hidden />
+                </>
+              )}
             </Button>
           </div>
           {submitError ? (

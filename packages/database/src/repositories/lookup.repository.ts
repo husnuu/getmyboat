@@ -6,6 +6,7 @@ import type {
   ListingModelOptionDTO,
   OnboardingConfigDTO,
   OnboardingFieldDTO,
+  ResolvedOnboardingConfigDTO,
 } from "@getyourboat/shared";
 
 export type LookupModel =
@@ -18,11 +19,15 @@ export interface FieldFilter {
   type?: string;
   section?: string;
   package?: string;
+  /** Union filter — field included in any of these packages. */
+  packages?: string[];
 }
 
 /** Read port for the seeded onboarding configuration / lookup tables. */
 export interface OnboardingLookupRepository {
   getConfig(): Promise<OnboardingConfigDTO>;
+  getResolvedConfig(listingModelKeys: string[]): Promise<ResolvedOnboardingConfigDTO>;
+  getAllFields(): Promise<OnboardingFieldDTO[]>;
   getBoatTypes(): Promise<BoatTypeOptionDTO[]>;
   getListingModels(): Promise<ListingModelOptionDTO[]>;
   getFeatureGroups(): Promise<FeatureGroupDTO[]>;

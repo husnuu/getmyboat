@@ -1,9 +1,11 @@
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
 import { authPlugin } from "./plugins/auth.js";
-import { supabaseAuthPlugin } from "./plugins/supabase-auth.js";
+import { captainAuthPlugin } from "./plugins/captain-auth.js";
 import { registerRoutes } from "./routes/index.js";
 import { HttpError } from "./lib/errors.js";
+import { env } from "./config/env.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -15,17 +17,24 @@ export async function buildApp() {
     },
   });
 
-  await app.register(cors, { origin: true, credentials: true });
+  await app.register(cors, {
+    origin: [env.CAPTAIN_ORIGIN],
+    credentials: true,
+  });
+  await app.register(cookie);
   await app.register(authPlugin); // legacy JWT (phase 0)
-  await app.register(supabaseAuthPlugin); // Supabase Auth (boat onboarding)
+  await app.register(captainAuthPlugin);
   await registerRoutes(app);
 
   app.setErrorHandler((error: FastifyError, _req, reply) => {
     if (error instanceof HttpError) {
+      const enriched = error as HttpError & { details?: unknown; fields?: unknown };
       return reply.code(error.statusCode).send({
         message: error.message,
         code: error.code,
-        details: (error as HttpError & { details?: unknown }).details,
+        error: error.code,
+        fields: enriched.fields,
+        details: enriched.details,
       });
     }
     app.log.error(error);

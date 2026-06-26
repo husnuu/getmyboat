@@ -1,67 +1,98 @@
 "use client";
 
-import type { Session, User } from "@supabase/supabase-js";
+import type { AuthUserDTO } from "@getyourboat/shared";
 import { useRouter } from "next/navigation";
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
-import { supabase } from "../lib/supabase";
+import { api } from "../lib/api";
+import {
+  login as authLogin,
+  logoutSession,
+  refreshSession,
+  signup as authSignup,
+} from "../lib/auth/client";
+import { getAccessToken } from "../lib/auth/token-store";
 
 interface AuthContextValue {
-  session: Session | null;
-  user: User | null;
+  user: AuthUserDTO | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
+  isAuthenticated: boolean;
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
   signOut: () => Promise<void>;
+  redirectAfterAuth: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUserDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const redirectAfterAuth = useCallback(async () => {
+    try {
+      const { profile } = await api.getProfile();
+      if (!profile?.isComplete) {
+        router.replace("/profile/setup");
+        return;
+      }
+      const { items } = await api.myBoats();
+      if (items.length === 0) {
+        router.replace("/boats");
+        return;
+      }
+      router.replace("/");
+    } catch {
+      router.replace("/boats");
+    }
+  }, [router]);
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let active = true;
+    (async () => {
+      const session = await refreshSession();
+      if (!active) return;
+      if (session) {
+        setUser(session.user);
+      } else if (getAccessToken()) {
+        setUser(null);
+      }
       setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
-    return () => sub.subscription.unsubscribe();
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      session,
-      user: session?.user ?? null,
+      user,
       loading,
-      async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw new Error(error.message);
+      isAuthenticated: !!user && !!getAccessToken(),
+      async signIn(email, password, rememberMe) {
+        const session = await authLogin({ email, password, rememberMe });
+        setUser(session.user);
       },
       async signUp(email, password, fullName) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { data: fullName ? { full_name: fullName } : undefined },
-        });
-        if (error) throw new Error(error.message);
+        const session = await authSignup({ email, password, fullName });
+        setUser(session.user);
       },
       async signOut() {
-        await supabase.auth.signOut();
+        await logoutSession();
+        setUser(null);
         router.push("/login");
       },
+      redirectAfterAuth,
     }),
-    [session, loading, router]
+    [user, loading, router, redirectAfterAuth]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

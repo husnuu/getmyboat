@@ -15,6 +15,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
   JWT_SECRET: z.string().min(8).default("change-me-in-production"),
   JWT_EXPIRES_IN: z.string().default("7d"),
+  REFRESH_COOKIE_NAME: z.string().default("gyb_refresh"),
+  CAPTAIN_ORIGIN: z.string().url().default("http://localhost:3002"),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
@@ -24,6 +26,7 @@ const envSchema = z.object({
   SUPABASE_JWT_SECRET: z.string().optional(),
   SUPABASE_PHOTOS_BUCKET: z.string().default("boat-photos"),
   SUPABASE_DOCUMENTS_BUCKET: z.string().default("boat-documents"),
+  SUPABASE_EXPERIENCE_PHOTOS_BUCKET: z.string().default("experience-photos"),
 });
 
 export const env = envSchema.parse(process.env);

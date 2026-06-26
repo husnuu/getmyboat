@@ -2,15 +2,36 @@ import { randomUUID } from "node:crypto";
 import { boatRepository, onboardingLookupRepository } from "@getyourboat/database";
 import type { LookupModel } from "@getyourboat/database";
 import {
+  ApprovalType,
   BoatStatus,
   OnboardingStep,
+  buildAmenitiesSchema,
+  buildBoatTypeFeaturesSchema,
+  buildDescriptionRulesSchema,
+  buildLocationSchema,
+  buildPricingSchema,
   computeProgress,
+  getRequiredAmenityKeys,
+  getRequiredDescriptionFieldKeys,
+  getRequiredFeatureKeysForStep,
+  getRequiredLocationKeys,
+  getRequiredPricingFieldKeys,
+  sanitizeFeatureWrites,
   type AmenitiesInput,
+  type BoatDraftPatchInput,
   type BoatTypeFeaturesInput,
   type DescriptionRulesInput,
   type ExtraInput,
   type ListingModelInput,
+  type LocationInput,
   type PricingInput,
+  type StructuredRulesMap,
+  draftAmenitiesSchema,
+  draftBoatTypeFeaturesSchema,
+  draftDescriptionRulesSchema,
+  draftListingModelSchema,
+  draftLocationSchema,
+  draftPricingSchema,
 } from "@getyourboat/shared";
 import { badRequest, conflict, notFound } from "../../../lib/errors.js";
 import {
@@ -43,6 +64,52 @@ export async function getBoatState(boatId: string) {
   return boat;
 }
 
+async function listingModelKeysForBoat(boatId: string): Promise<string[]> {
+  const boat = await boatRepository.getState(boatId);
+  if (!boat) throw notFound("Boat not found");
+  return boat.listingModels.map((m) => m.key);
+}
+
+export async function buildBoatTypeFeaturesSchemaForBoat(boatId: string) {
+  const modelKeys = await listingModelKeysForBoat(boatId);
+  if (modelKeys.length === 0) return buildBoatTypeFeaturesSchema([]);
+  const fields = await onboardingLookupRepository.getAllFields();
+  const required = getRequiredFeatureKeysForStep(fields, modelKeys);
+  return buildBoatTypeFeaturesSchema(required);
+}
+
+export async function buildAmenitiesSchemaForBoat(boatId: string) {
+  const modelKeys = await listingModelKeysForBoat(boatId);
+  if (modelKeys.length === 0) return buildAmenitiesSchema([]);
+  const fields = await onboardingLookupRepository.getAllFields();
+  const required = getRequiredAmenityKeys(fields, modelKeys);
+  return buildAmenitiesSchema(required);
+}
+
+export async function buildLocationSchemaForBoat(boatId: string) {
+  const modelKeys = await listingModelKeysForBoat(boatId);
+  if (modelKeys.length === 0) return buildLocationSchema([]);
+  const fields = await onboardingLookupRepository.getAllFields();
+  const required = getRequiredLocationKeys(fields, modelKeys);
+  return buildLocationSchema(required);
+}
+
+export async function buildDescriptionRulesSchemaForBoat(boatId: string) {
+  const modelKeys = await listingModelKeysForBoat(boatId);
+  if (modelKeys.length === 0) return buildDescriptionRulesSchema(["listing_title"]);
+  const fields = await onboardingLookupRepository.getAllFields();
+  const required = getRequiredDescriptionFieldKeys(fields, modelKeys);
+  return buildDescriptionRulesSchema(required);
+}
+
+export async function buildPricingSchemaForBoat(boatId: string) {
+  const modelKeys = await listingModelKeysForBoat(boatId);
+  if (modelKeys.length === 0) return buildPricingSchema([]);
+  const fields = await onboardingLookupRepository.getAllFields();
+  const required = getRequiredPricingFieldKeys(fields, modelKeys);
+  return buildPricingSchema(required);
+}
+
 /* ------------------------------ Draft ------------------------------ */
 
 export function createDraft(ownerId: string) {
@@ -68,10 +135,25 @@ export async function updateListingModel(boatId: string, input: ListingModelInpu
 
 /* ----------------- Step 2: Boat type & features -------------------- */
 
-export async function updateBoatTypeFeatures(boatId: string, input: BoatTypeFeaturesInput) {
+export async function updateBoatTypeFeatures(
+  boatId: string,
+  input: BoatTypeFeaturesInput & { noCrewMembers?: boolean }
+) {
+  const sanitized = sanitizeFeatureWrites(input.features);
   await assertKeysExist("boatTypeOption", [input.boatTypeKey]);
-  await assertKeysExist("featureDefinition", input.features.map((f) => f.key));
-  await boatRepository.setBoatTypeAndFeatures(boatId, input.boatTypeKey, input.features);
+  await assertKeysExist("featureDefinition", sanitized.map((f) => f.key));
+
+  const features = [...sanitized];
+  if (input.noCrewMembers) {
+    const existing = features.find((f) => f.key === "number_of_crew_members");
+    if (existing) existing.value = "0";
+    else features.push({ key: "number_of_crew_members", value: "0" });
+  }
+
+  await boatRepository.setBoatTypeAndFeatures(boatId, input.boatTypeKey, features, {
+    engineType: input.engineType ?? null,
+    cabinConfigurations: input.cabinConfigurations,
+  });
   await applyStepProgress(boatId, OnboardingStep.BOAT_TYPE_FEATURES);
   return getBoatState(boatId);
 }
@@ -92,19 +174,46 @@ export async function updateAmenities(boatId: string, input: AmenitiesInput) {
   return getBoatState(boatId);
 }
 
-/* ------------------- Step 4: Description & rules ------------------- */
+/* ----------------------- Step 4: Location -------------------------- */
+
+export async function updateLocation(boatId: string, input: LocationInput) {
+  await assertKeysExist("featureDefinition", input.features.map((f) => f.key));
+  await boatRepository.upsertFeatureValues(boatId, input.features);
+  await applyStepProgress(boatId, OnboardingStep.LOCATION);
+  return getBoatState(boatId);
+}
+
+/* ------------------- Step 5: Description & rules ------------------- */
 
 export async function updateDescriptionRules(boatId: string, input: DescriptionRulesInput) {
-  await boatRepository.setDescriptionRules(boatId, input);
+  const fieldValues = (input.fieldValues ?? {}) as StructuredRulesMap;
+  const structuredRules: StructuredRulesMap = { ...fieldValues };
+  delete structuredRules.listing_title;
+  delete structuredRules.description;
+
+  await boatRepository.setDescriptionRules(boatId, {
+    title: input.title ?? String(fieldValues.listing_title ?? ""),
+    description: input.description ?? String(fieldValues.description ?? ""),
+    structuredRules,
+  });
   await applyStepProgress(boatId, OnboardingStep.DESCRIPTION_RULES);
   return getBoatState(boatId);
 }
 
-/* ----------------------- Step 6: Pricing & extras ------------------ */
+/* ----------------------- Step 7: Pricing & extras ------------------ */
 
 export async function updatePricing(boatId: string, input: PricingInput) {
   await assertKeysExist("listingModelOption", input.pricing.map((p) => p.listingModelKey));
   await boatRepository.replacePricing(boatId, input.pricing);
+
+  const patch: StructuredRulesMap = { ...(input.bookingFields ?? {}) };
+  if (input.contactForFuelCost !== undefined) {
+    patch.contactForFuelCost = input.contactForFuelCost;
+  }
+  if (Object.keys(patch).length > 0) {
+    await boatRepository.mergeStructuredRules(boatId, patch);
+  }
+
   await applyStepProgress(boatId, OnboardingStep.PRICING);
   return getBoatState(boatId);
 }
@@ -174,6 +283,39 @@ export async function deletePhoto(boatId: string, photoId: string) {
   return { deleted: photoId };
 }
 
+/* ---------------------- Boat plan (Stay Included) ------------------ */
+
+export async function createBoatPlanUploadUrl(boatId: string, fileName: string) {
+  const path = `${boatId}/boat-plan/${randomUUID()}-${fileName}`;
+  const { data, error } = await getSupabaseAdmin()
+    .storage.from(PHOTOS_BUCKET)
+    .createSignedUploadUrl(path);
+  if (error) throw badRequest(error.message);
+  return { bucket: PHOTOS_BUCKET, path, token: data.token, signedUrl: data.signedUrl };
+}
+
+export async function registerBoatPlan(boatId: string, storagePath: string) {
+  const url = publicUrl(PHOTOS_BUCKET, storagePath);
+  await boatRepository.setBoatPlanUrl(boatId, url);
+  await applyStepProgress(boatId, OnboardingStep.PHOTOS);
+  return getBoatState(boatId);
+}
+
+export async function deleteBoatPlan(boatId: string) {
+  const boat = await getBoatState(boatId);
+  const existing = boat.features.find((f) => f.key === "boat_plan")?.value;
+  if (existing) {
+    const needle = `/public/${PHOTOS_BUCKET}/`;
+    const idx = existing.indexOf(needle);
+    if (idx >= 0) {
+      const storagePath = decodeURIComponent(existing.slice(idx + needle.length));
+      await getSupabaseAdmin().storage.from(PHOTOS_BUCKET).remove([storagePath]);
+    }
+  }
+  await boatRepository.setBoatPlanUrl(boatId, null);
+  return getBoatState(boatId);
+}
+
 /* --------------------------- Step 7: Documents --------------------- */
 
 export async function createDocumentUploadUrl(
@@ -228,4 +370,163 @@ export async function submitForReview(boatId: string) {
 
   await boatRepository.markSubmitted(boatId);
   return getBoatState(boatId);
+}
+
+export async function updateApprovalType(boatId: string, approvalType: ApprovalType) {
+  await boatRepository.updateApprovalType(boatId, approvalType);
+  return getBoatState(boatId);
+}
+
+/* --------------------------- Draft autosave --------------------------- */
+
+export async function saveDraft(boatId: string, input: BoatDraftPatchInput) {
+  const { step, data } = input;
+
+  switch (step) {
+    case OnboardingStep.LISTING_MODEL: {
+      const parsed = draftListingModelSchema.parse(data);
+      const boat = await getBoatState(boatId);
+      if (parsed.listingModelKeys !== undefined) {
+        if (parsed.listingModelKeys.length > 0) {
+          await assertKeysExist("listingModelOption", parsed.listingModelKeys);
+        }
+        await boatRepository.replaceListingModels(
+          boatId,
+          parsed.listingModelKeys,
+          parsed.approvalType ?? boat.approvalType
+        );
+      } else if (parsed.approvalType) {
+        await boatRepository.updateApprovalType(boatId, parsed.approvalType);
+      }
+      break;
+    }
+    case OnboardingStep.BOAT_TYPE_FEATURES: {
+      const parsed = draftBoatTypeFeaturesSchema.parse(data);
+      const features = sanitizeFeatureWrites(parsed.features ?? []);
+      if (parsed.noCrewMembers) {
+        const existing = features.find((f) => f.key === "number_of_crew_members");
+        if (existing) existing.value = "0";
+        else features.push({ key: "number_of_crew_members", value: "0" });
+      }
+      if (features.length > 0) {
+        await assertKeysExist("featureDefinition", features.map((f) => f.key));
+        await boatRepository.upsertFeatureValues(boatId, features);
+      }
+      const meta = {
+        engineType: parsed.engineType,
+        cabinConfigurations: parsed.cabinConfigurations,
+      };
+      if (parsed.boatTypeKey) {
+        await assertKeysExist("boatTypeOption", [parsed.boatTypeKey]);
+        await boatRepository.setBoatTypeAndFeatures(
+          boatId,
+          parsed.boatTypeKey,
+          features,
+          meta
+        );
+      } else if (parsed.engineType !== undefined) {
+        await boatRepository.updateEngineType(boatId, parsed.engineType ?? null);
+      } else if (parsed.cabinConfigurations !== undefined) {
+        const boat = await getBoatState(boatId);
+        const typeKey = boat.boatType?.key;
+        if (typeKey) {
+          await boatRepository.setBoatTypeAndFeatures(boatId, typeKey, features, meta);
+        }
+      }
+      break;
+    }
+    case OnboardingStep.AMENITIES: {
+      const parsed = draftAmenitiesSchema.parse(data);
+      if (parsed.amenities?.length) {
+        const amenities = parsed.amenities.map((a) => ({
+          amenityKey: a.amenityKey,
+          isIncluded: a.isIncluded ?? true,
+          isExtra: a.isExtra ?? false,
+          extraPrice: a.extraPrice ?? null,
+          currency: a.currency ?? null,
+        }));
+        await assertKeysExist("amenity", amenities.map((a) => a.amenityKey));
+        await boatRepository.replaceAmenities(boatId, amenities);
+      }
+      break;
+    }
+    case OnboardingStep.LOCATION: {
+      const parsed = draftLocationSchema.parse(data);
+      if (parsed.features?.length) {
+        await assertKeysExist("featureDefinition", parsed.features.map((f) => f.key));
+        await boatRepository.upsertFeatureValues(boatId, parsed.features);
+      }
+      break;
+    }
+    case OnboardingStep.DESCRIPTION_RULES: {
+      const parsed = draftDescriptionRulesSchema.parse(data);
+      const fieldValues = (parsed.fieldValues ?? {}) as StructuredRulesMap;
+      const structuredRules: StructuredRulesMap = { ...fieldValues };
+      delete structuredRules.listing_title;
+      delete structuredRules.description;
+      await boatRepository.setDescriptionRules(boatId, {
+        title: parsed.title ?? String(fieldValues.listing_title ?? ""),
+        description: parsed.description ?? String(fieldValues.description ?? ""),
+        structuredRules,
+      });
+      break;
+    }
+    case OnboardingStep.PRICING: {
+      const parsed = draftPricingSchema.parse(data);
+      if (parsed.pricing?.length) {
+        await assertKeysExist(
+          "listingModelOption",
+          parsed.pricing.map((p) => p.listingModelKey)
+        );
+        await boatRepository.replacePricing(
+          boatId,
+          parsed.pricing.map((p) => ({
+            listingModelKey: p.listingModelKey,
+            price: p.price,
+            currency: p.currency ?? "EUR",
+          }))
+        );
+      }
+      const patch: StructuredRulesMap = { ...(parsed.bookingFields ?? {}) };
+      if (parsed.contactForFuelCost !== undefined) {
+        patch.contactForFuelCost = parsed.contactForFuelCost;
+      }
+      if (Object.keys(patch).length > 0) {
+        await boatRepository.mergeStructuredRules(boatId, patch);
+      }
+      break;
+    }
+    case OnboardingStep.PHOTOS:
+    case OnboardingStep.DOCUMENTS:
+      break;
+    default:
+      break;
+  }
+
+  await boatRepository.touchDraft(boatId, step);
+  return getBoatState(boatId);
+}
+
+export async function deleteBoat(boatId: string) {
+  await getBoatState(boatId);
+  const paths = await boatRepository.listStoragePaths(boatId);
+  const admin = getSupabaseAdmin();
+
+  if (paths.photos.length > 0) {
+    await admin.storage.from(PHOTOS_BUCKET).remove(paths.photos);
+  }
+  if (paths.documents.length > 0) {
+    await admin.storage.from(DOCUMENTS_BUCKET).remove(paths.documents);
+  }
+  if (paths.boatPlan) {
+    await admin.storage.from(PHOTOS_BUCKET).remove([paths.boatPlan]);
+  }
+
+  try {
+    await boatRepository.deleteBoat(boatId);
+  } catch {
+    throw conflict("Tekne silinemedi — aktif rezervasyonlar olabilir.");
+  }
+
+  return { deleted: boatId };
 }

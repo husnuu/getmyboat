@@ -1,6 +1,6 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, type IconDefinition } from "../icons";
 
 /**
  * Sidebar navigation. Desktop: fixed 240px, navy (ink) background. Active item
@@ -30,12 +30,12 @@ export function SidebarBrand({ children }: { children: React.ReactNode }) {
 
 export interface NavItemProps
   extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
-  icon?: LucideIcon;
+  icon?: IconDefinition;
   active?: boolean;
 }
 
 export const NavItem = React.forwardRef<HTMLAnchorElement, NavItemProps>(
-  ({ icon: Icon, active, className, children, ...props }, ref) => (
+  ({ icon, active, className, children, ...props }, ref) => (
     <a
       ref={ref}
       aria-current={active ? "page" : undefined}
@@ -48,7 +48,9 @@ export const NavItem = React.forwardRef<HTMLAnchorElement, NavItemProps>(
       )}
       {...props}
     >
-      {Icon ? <Icon className="h-5 w-5 shrink-0" aria-hidden /> : null}
+      {icon ? (
+        <FontAwesomeIcon icon={icon} className="w-5 shrink-0 text-[18px]" aria-hidden />
+      ) : null}
       {children}
     </a>
   )

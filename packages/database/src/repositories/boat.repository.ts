@@ -73,6 +73,12 @@ export interface BoatRepository {
   // Progress
   getCompletedSteps(boatId: string): Promise<OnboardingStep[]>;
   updateProgress(boatId: string, progress: ProgressState): Promise<void>;
+  touchDraft(boatId: string, activeStep: OnboardingStep): Promise<void>;
+
+  updateEngineType(
+    boatId: string,
+    engineType: import("@getyourboat/shared").EngineType | null
+  ): Promise<void>;
 
   // Steps
   replaceListingModels(
@@ -83,8 +89,13 @@ export interface BoatRepository {
   setBoatTypeAndFeatures(
     boatId: string,
     boatTypeKey: string,
-    features: FeatureWrite[]
+    features: FeatureWrite[],
+    meta?: {
+      engineType?: import("@getyourboat/shared").EngineType | null;
+      cabinConfigurations?: import("@getyourboat/shared").CabinConfigurationInput[];
+    }
   ): Promise<void>;
+  upsertFeatureValues(boatId: string, features: FeatureWrite[]): Promise<void>;
   replaceAmenities(boatId: string, amenities: AmenityWrite[]): Promise<void>;
   setDescriptionRules(
     boatId: string,
@@ -94,9 +105,14 @@ export interface BoatRepository {
       rulesText?: string | null;
       checkInNotes?: string | null;
       checkOutNotes?: string | null;
-      structuredRules?: Record<string, boolean>;
+      structuredRules?: Record<string, string | boolean | number | null>;
     }
   ): Promise<void>;
+  mergeStructuredRules(
+    boatId: string,
+    patch: Record<string, string | boolean | number | null>
+  ): Promise<void>;
+  setBoatPlanUrl(boatId: string, url: string | null): Promise<void>;
   replacePricing(boatId: string, pricing: PricingWrite[]): Promise<void>;
 
   // Extras
@@ -142,4 +158,8 @@ export interface BoatRepository {
   markSubmitted(boatId: string): Promise<void>;
   approve(boatId: string, reviewerId: string): Promise<void>;
   reject(boatId: string, reviewerId: string, reason: string): Promise<void>;
+
+  updateApprovalType(boatId: string, approvalType: ApprovalType): Promise<void>;
+  listStoragePaths(boatId: string): Promise<{ photos: string[]; documents: string[]; boatPlan: string | null }>;
+  deleteBoat(boatId: string): Promise<void>;
 }

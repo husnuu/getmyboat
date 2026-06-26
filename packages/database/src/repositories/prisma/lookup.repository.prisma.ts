@@ -6,7 +6,9 @@ import type {
   ListingModelOptionDTO,
   OnboardingConfigDTO,
   OnboardingFieldDTO,
+  ResolvedOnboardingConfigDTO,
 } from "@getyourboat/shared";
+import { resolveOnboardingConfig } from "@getyourboat/shared";
 import { prisma } from "../../client.js";
 import type {
   FieldFilter,
@@ -44,17 +46,40 @@ export class PrismaOnboardingLookupRepository implements OnboardingLookupReposit
   }
 
   getFields(filter: FieldFilter): Promise<OnboardingFieldDTO[]> {
+    const packageFilter = filter.packages?.length
+      ? {
+          inclusions: {
+            some: {
+              packageKey: { in: filter.packages },
+              included: true,
+            },
+          },
+        }
+      : filter.package
+        ? { inclusions: { some: { packageKey: filter.package, included: true } } }
+        : {};
+
     return prisma.onboardingFieldDefinition.findMany({
       where: {
         ...(filter.type ? { type: filter.type } : {}),
         ...(filter.section ? { sectionKey: filter.section } : {}),
-        ...(filter.package
-          ? { inclusions: { some: { packageKey: filter.package, included: true } } }
-          : {}),
+        ...packageFilter,
       },
       orderBy: { sortOrder: "asc" },
       include: { inclusions: true },
     });
+  }
+
+  getAllFields(): Promise<OnboardingFieldDTO[]> {
+    return prisma.onboardingFieldDefinition.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: { inclusions: true },
+    });
+  }
+
+  async getResolvedConfig(listingModelKeys: string[]): Promise<ResolvedOnboardingConfigDTO> {
+    const [config, fields] = await Promise.all([this.getConfig(), this.getAllFields()]);
+    return resolveOnboardingConfig(config, fields, listingModelKeys);
   }
 
   async getConfig(): Promise<OnboardingConfigDTO> {

@@ -1,44 +1,40 @@
 "use client";
 
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@getyourboat/ui";
-import { useRouter } from "next/navigation";
+import { captainLoginSchema } from "@getyourboat/shared";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "../../components/auth-provider";
-import { Alert, Field, Input } from "../../components/ui";
+import { Alert, Checkbox, Field, Input } from "../../components/ui";
 
 export default function LoginPage() {
-  const { signIn, signUp, session, loading } = useAuth();
-  const router = useRouter();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const { signIn, user, loading, redirectAfterAuth } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && session) router.replace("/");
-  }, [loading, session, router]);
+    if (!loading && user) {
+      void redirectAfterAuth();
+    }
+  }, [loading, user, redirectAfterAuth]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setNotice(null);
+    const parsed = captainLoginSchema.safeParse({ email, password, rememberMe });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Geçersiz giriş");
+      return;
+    }
     setBusy(true);
     try {
-      if (mode === "signin") {
-        await signIn(email, password);
-        router.replace("/");
-      } else {
-        await signUp(email, password, fullName);
-        setNotice(
-          "Kayıt oluşturuldu. E-posta doğrulaması açıksa gelen kutunu kontrol et, sonra giriş yap."
-        );
-        setMode("signin");
-      }
+      await signIn(parsed.data.email, parsed.data.password, parsed.data.rememberMe);
+      await redirectAfterAuth();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setError(err instanceof Error ? err.message : "Giriş başarısız");
     } finally {
       setBusy(false);
     }
@@ -48,27 +44,16 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>
-            {mode === "signin" ? "Kaptan Girişi" : "Kaptan Kaydı"}
-          </CardTitle>
+          <CardTitle>Kaptan Girişi</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error ? <Alert>{error}</Alert> : null}
-            {notice ? <Alert variant="success">{notice}</Alert> : null}
-            {mode === "signup" ? (
-              <Field label="Ad Soyad">
-                <Input
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Kaptan Ahmet"
-                />
-              </Field>
-            ) : null}
+            {error ? <Alert variant="danger">{error}</Alert> : null}
             <Field label="E-posta">
               <Input
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="kaptan@example.com"
@@ -78,31 +63,31 @@ export default function LoginPage() {
               <Input
                 type="password"
                 required
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
               />
             </Field>
-            <Button type="submit" className="w-full" disabled={busy}>
-              {busy
-                ? "Lütfen bekleyin…"
-                : mode === "signin"
-                  ? "Giriş yap"
-                  : "Kayıt ol"}
+            <div className="flex items-center justify-between gap-3">
+              <Checkbox
+                label="Beni hatırla"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <Link href="#" className="text-body-sm text-brand-600 hover:underline">
+                Şifremi unuttum
+              </Link>
+            </div>
+            <Button type="submit" className="w-full" loading={busy}>
+              Giriş yap
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-slate-500">
-            {mode === "signin" ? "Hesabın yok mu? " : "Zaten hesabın var mı? "}
-            <button
-              className="font-medium text-brand-600 hover:underline"
-              onClick={() => {
-                setError(null);
-                setNotice(null);
-                setMode(mode === "signin" ? "signup" : "signin");
-              }}
-            >
-              {mode === "signin" ? "Kayıt ol" : "Giriş yap"}
-            </button>
+            Hesabın yok mu?{" "}
+            <Link href="/signup" className="font-medium text-brand-600 hover:underline">
+              Kayıt ol
+            </Link>
           </p>
         </CardContent>
       </Card>

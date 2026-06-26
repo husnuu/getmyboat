@@ -1,8 +1,7 @@
 "use client";
 
-import { Lightbulb } from "lucide-react";
 import { useState } from "react";
-import { Banner, Carousel, Skeleton } from "@getyourboat/ui";
+import { Banner, Carousel, Skeleton, faLightbulb } from "@getyourboat/ui";
 import { useAnnouncements } from "../../lib/api/dashboard";
 
 export function AnnouncementCarousel() {
@@ -19,7 +18,7 @@ export function AnnouncementCarousel() {
       slides={data.map((a) => (
         <Banner
           key={a.id}
-          icon={Lightbulb}
+          icon={faLightbulb}
           title={a.title}
           description={a.description}
           onDismiss={() => setDismissed(true)}

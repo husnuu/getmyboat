@@ -1,14 +1,16 @@
-import type {
-  ApprovalType,
-  BoatDocumentDTO,
-  BoatExtraDTO,
-  BoatListItemDTO,
-  BoatPhotoDTO,
-  DocumentStatus,
-  ExtraPricingType,
-  OnboardingStep,
-  ProgressState,
-  SerializedBoatDTO,
+import {
+  extractFileNameFromStoragePath,
+  mergeActiveStep,
+  type ApprovalType,
+  type BoatDocumentDTO,
+  type BoatExtraDTO,
+  type BoatListItemDTO,
+  type BoatPhotoDTO,
+  type DocumentStatus,
+  type ExtraPricingType,
+  type OnboardingStep,
+  type ProgressState,
+  type SerializedBoatDTO,
 } from "@getyourboat/shared";
 import { prisma } from "../../client.js";
 import type {
@@ -32,6 +34,7 @@ const boatInclude = {
   seasonalPrices: true,
   extras: true,
   documents: { include: { documentType: true } },
+  cabinConfigurations: { orderBy: { createdAt: "asc" } },
 } as const;
 
 type FullBoat = Awaited<ReturnType<typeof loadFull>>;
@@ -69,6 +72,7 @@ function toDocumentDTO(d: FullBoat["documents"][number]): BoatDocumentDTO {
     id: d.id,
     documentTypeKey: d.documentTypeKey,
     documentTypeLabel: d.documentType.label,
+    fileName: extractFileNameFromStoragePath(d.storagePath),
     status: d.status as DocumentStatus,
     publicUrl: d.publicUrl,
     rejectionReason: d.rejectionReason,
@@ -76,31 +80,58 @@ function toDocumentDTO(d: FullBoat["documents"][number]): BoatDocumentDTO {
   };
 }
 
+function boatPlanUrlFromBoat(
+  boat: Pick<FullBoat, "structuredRules" | "featureValues">
+): string | null {
+  const rules = boat.structuredRules as Record<string, unknown> | null;
+  const fromRules = rules?.boat_plan;
+  if (typeof fromRules === "string" && fromRules.trim()) return fromRules;
+
+  const legacy = boat.featureValues.find((f) => f.featureKey === "boat_plan")?.value;
+  return legacy?.trim() ? legacy : null;
+}
+
 function serialize(boat: FullBoat): SerializedBoatDTO {
+  const boatPlanUrl = boatPlanUrlFromBoat(boat);
+  const features = boat.featureValues
+    .filter((f) => f.featureKey !== "boat_plan")
+    .map((f) => ({
+      key: f.featureKey,
+      label: f.feature.label,
+      group: f.feature.group.key,
+      value: f.value,
+    }));
+
+  if (boatPlanUrl) {
+    features.push({
+      key: "boat_plan",
+      label: "Boat Plan",
+      group: "media_and_description",
+      value: boatPlanUrl,
+    });
+  }
+
   return {
     id: boat.id,
     ownerId: boat.ownerId,
     status: boat.status,
     approvalType: boat.approvalType,
     boatType: boat.boatType,
+    engineType: boat.engineType as import("@getyourboat/shared").EngineType | null,
     title: boat.title,
     description: boat.description,
     rulesText: boat.rulesText,
     checkInNotes: boat.checkInNotes,
     checkOutNotes: boat.checkOutNotes,
-    structuredRules: (boat.structuredRules as Record<string, boolean> | null) ?? null,
+    structuredRules: (boat.structuredRules as Record<string, string | boolean | number | null> | null) ?? null,
     progress: {
       currentStep: boat.currentStep,
+      activeStep: boat.activeStep,
       completedSteps: boat.completedSteps,
       isReadyForReview: boat.isReadyForReview,
     },
     listingModels: boat.listingModels.map((l) => l.listingModel),
-    features: boat.featureValues.map((f) => ({
-      key: f.featureKey,
-      label: f.feature.label,
-      group: f.feature.group.key,
-      value: f.value,
-    })),
+    features,
     amenities: boat.amenities.map((a) => ({
       amenityId: a.amenityId,
       key: a.amenity.key,
@@ -120,11 +151,20 @@ function serialize(boat: FullBoat): SerializedBoatDTO {
     })),
     extras: boat.extras.map(toExtraDTO),
     documents: boat.documents.map(toDocumentDTO),
+    cabinConfigurations: boat.cabinConfigurations.map((c) => ({
+      id: c.id,
+      boatId: c.boatId,
+      cabinType: c.cabinType,
+      wcType: c.wcType,
+      quantity: c.quantity,
+      createdAt: c.createdAt,
+    })),
     submittedAt: boat.submittedAt,
     reviewedAt: boat.reviewedAt,
     rejectionReason: boat.rejectionReason,
     createdAt: boat.createdAt,
     updatedAt: boat.updatedAt,
+    lastSavedAt: boat.lastSavedAt,
   };
 }
 
@@ -156,6 +196,7 @@ export class PrismaBoatRepository implements BoatRepository {
       id: b.id,
       title: b.title,
       status: b.status,
+      approvalType: b.approvalType,
       currentStep: b.currentStep,
       photos: b.photos.map(toPhotoDTO),
       boatType: b.boatType,
@@ -191,6 +232,30 @@ export class PrismaBoatRepository implements BoatRepository {
     });
   }
 
+  async touchDraft(boatId: string, activeStep: OnboardingStep): Promise<void> {
+    const boat = await prisma.boat.findUniqueOrThrow({
+      where: { id: boatId },
+      select: { activeStep: true },
+    });
+    await prisma.boat.update({
+      where: { id: boatId },
+      data: {
+        activeStep: mergeActiveStep(boat.activeStep, activeStep),
+        lastSavedAt: new Date(),
+      },
+    });
+  }
+
+  async updateEngineType(
+    boatId: string,
+    engineType: import("@getyourboat/shared").EngineType | null
+  ): Promise<void> {
+    await prisma.boat.update({
+      where: { id: boatId },
+      data: { engineType },
+    });
+  }
+
   async replaceListingModels(
     boatId: string,
     listingModelKeys: string[],
@@ -205,12 +270,8 @@ export class PrismaBoatRepository implements BoatRepository {
     ]);
   }
 
-  async setBoatTypeAndFeatures(
-    boatId: string,
-    boatTypeKey: string,
-    features: FeatureWrite[]
-  ): Promise<void> {
-    await prisma.boat.update({ where: { id: boatId }, data: { boatTypeKey } });
+  async upsertFeatureValues(boatId: string, features: FeatureWrite[]): Promise<void> {
+    if (features.length === 0) return;
     await prisma.$transaction(
       features.map((f) =>
         prisma.boatFeatureValue.upsert({
@@ -220,6 +281,50 @@ export class PrismaBoatRepository implements BoatRepository {
         })
       )
     );
+  }
+
+  async setBoatTypeAndFeatures(
+    boatId: string,
+    boatTypeKey: string,
+    features: FeatureWrite[],
+    meta?: {
+      engineType?: import("@getyourboat/shared").EngineType | null;
+      cabinConfigurations?: import("@getyourboat/shared").CabinConfigurationInput[];
+    }
+  ): Promise<void> {
+    await prisma.boat.update({
+      where: { id: boatId },
+      data: {
+        boatTypeKey,
+        ...(meta?.engineType !== undefined ? { engineType: meta.engineType } : {}),
+      },
+    });
+    await prisma.$transaction([
+      ...features.map((f) =>
+        prisma.boatFeatureValue.upsert({
+          where: { boatId_featureKey: { boatId, featureKey: f.key } },
+          update: { value: f.value ?? null },
+          create: { boatId, featureKey: f.key, value: f.value ?? null },
+        })
+      ),
+      ...(meta?.cabinConfigurations !== undefined
+        ? [
+            prisma.cabinConfiguration.deleteMany({ where: { boatId } }),
+            ...(meta.cabinConfigurations.length > 0
+              ? [
+                  prisma.cabinConfiguration.createMany({
+                    data: meta.cabinConfigurations.map((c) => ({
+                      boatId,
+                      cabinType: c.cabinType,
+                      wcType: c.wcType ?? null,
+                      quantity: c.quantity,
+                    })),
+                  }),
+                ]
+              : []),
+          ]
+        : []),
+    ]);
   }
 
   async replaceAmenities(boatId: string, amenities: AmenityWrite[]): Promise<void> {
@@ -249,7 +354,7 @@ export class PrismaBoatRepository implements BoatRepository {
       rulesText?: string | null;
       checkInNotes?: string | null;
       checkOutNotes?: string | null;
-      structuredRules?: Record<string, boolean>;
+      structuredRules?: Record<string, string | boolean | number | null>;
     }
   ): Promise<void> {
     await prisma.boat.update({
@@ -262,6 +367,29 @@ export class PrismaBoatRepository implements BoatRepository {
         checkOutNotes: input.checkOutNotes ?? null,
         structuredRules: input.structuredRules ?? undefined,
       },
+    });
+  }
+
+  async mergeStructuredRules(
+    boatId: string,
+    patch: Record<string, string | boolean | number | null>
+  ): Promise<void> {
+    const boat = await prisma.boat.findUnique({
+      where: { id: boatId },
+      select: { structuredRules: true },
+    });
+    const current =
+      (boat?.structuredRules as Record<string, string | boolean | number | null> | null) ?? {};
+    await prisma.boat.update({
+      where: { id: boatId },
+      data: { structuredRules: { ...current, ...patch } },
+    });
+  }
+
+  async setBoatPlanUrl(boatId: string, url: string | null): Promise<void> {
+    await this.mergeStructuredRules(boatId, { boat_plan: url });
+    await prisma.boatFeatureValue.deleteMany({
+      where: { boatId, featureKey: "boat_plan" },
     });
   }
 
@@ -466,5 +594,45 @@ export class PrismaBoatRepository implements BoatRepository {
         rejectionReason: reason,
       },
     });
+  }
+
+  async updateApprovalType(boatId: string, approvalType: ApprovalType): Promise<void> {
+    await prisma.boat.update({ where: { id: boatId }, data: { approvalType } });
+  }
+
+  async listStoragePaths(boatId: string) {
+    const [photos, documents, boat] = await Promise.all([
+      prisma.boatPhoto.findMany({ where: { boatId }, select: { storagePath: true } }),
+      prisma.boatDocument.findMany({ where: { boatId }, select: { storagePath: true } }),
+      prisma.boat.findUnique({
+        where: { id: boatId },
+        select: {
+          structuredRules: true,
+          featureValues: { where: { featureKey: "boat_plan" }, select: { featureKey: true, value: true } },
+        },
+      }),
+    ]);
+
+    let boatPlan: string | null = null;
+    const planUrl = boat ? boatPlanUrlFromBoat(boat) : null;
+    if (planUrl) {
+      const needle = `/object/public/`;
+      const idx = planUrl.indexOf(needle);
+      if (idx >= 0) {
+        const rest = planUrl.slice(idx + needle.length);
+        const slash = rest.indexOf("/");
+        if (slash >= 0) boatPlan = decodeURIComponent(rest.slice(slash + 1));
+      }
+    }
+
+    return {
+      photos: photos.map((p) => p.storagePath),
+      documents: documents.map((d) => d.storagePath),
+      boatPlan,
+    };
+  }
+
+  async deleteBoat(boatId: string): Promise<void> {
+    await prisma.boat.delete({ where: { id: boatId } });
   }
 }

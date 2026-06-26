@@ -1,0 +1,672 @@
+{
+  "brands": [
+    {
+      "category": "GULET",
+      "name": "Custom Built / Gulet",
+      "models": [
+        {
+          "name": "Bodrum Tipi Gulet",
+          "notes": "Standart marka/model sistemi yok — genelde tersane/usta bazında özel yapım. Kaptan formunda Brand alanı 'Custom Built / Gulet' sabit seçenek, Model alanı yerine serbest metin: 'Tersane Adı + Yapım Yılı'."
+        },
+        {
+          "name": "Marmaris Tipi Gulet",
+          "notes": "Standart marka/model sistemi yok — genelde tersane/usta bazında özel yapım. Kaptan formunda Brand alanı 'Custom Built / Gulet' sabit seçenek, Model alanı yerine serbest metin: 'Tersane Adı + Yapım Yılı'."
+        },
+        {
+          "name": "Söğüt Tipi Gulet",
+          "notes": "Standart marka/model sistemi yok — genelde tersane/usta bazında özel yapım. Kaptan formunda Brand alanı 'Custom Built / Gulet' sabit seçenek, Model alanı yerine serbest metin: 'Tersane Adı + Yapım Yılı'."
+        },
+        {
+          "name": "Ketch Rig Gulet",
+          "notes": "Standart marka/model sistemi yok — genelde tersane/usta bazında özel yapım. Kaptan formunda Brand alanı 'Custom Built / Gulet' sabit seçenek, Model alanı yerine serbest metin: 'Tersane Adı + Yapım Yılı'."
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Absolute Yachts",
+      "models": [
+        {
+          "name": "47 Fly",
+          "notes": null
+        },
+        {
+          "name": "52 Fly",
+          "notes": null
+        },
+        {
+          "name": "58 Fly",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Azimut",
+      "models": [
+        {
+          "name": "44",
+          "notes": null
+        },
+        {
+          "name": "50",
+          "notes": null
+        },
+        {
+          "name": "55",
+          "notes": null
+        },
+        {
+          "name": "60",
+          "notes": null
+        },
+        {
+          "name": "66",
+          "notes": null
+        },
+        {
+          "name": "72",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Beneteau (Motor)",
+      "models": [
+        {
+          "name": "Gran Turismo 32",
+          "notes": null
+        },
+        {
+          "name": "Gran Turismo 41",
+          "notes": null
+        },
+        {
+          "name": "Gran Turismo 50",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Fairline",
+      "models": [
+        {
+          "name": "Targa 43",
+          "notes": null
+        },
+        {
+          "name": "Squadron 50",
+          "notes": null
+        },
+        {
+          "name": "Phantom 65",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Ferretti Yachts",
+      "models": [
+        {
+          "name": "500",
+          "notes": null
+        },
+        {
+          "name": "550",
+          "notes": null
+        },
+        {
+          "name": "650",
+          "notes": null
+        },
+        {
+          "name": "720",
+          "notes": null
+        },
+        {
+          "name": "780",
+          "notes": null
+        },
+        {
+          "name": "850",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Galeon",
+      "models": [
+        {
+          "name": "325 GTO",
+          "notes": null
+        },
+        {
+          "name": "460 Fly",
+          "notes": null
+        },
+        {
+          "name": "560 Fly",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Jeanneau (Motor)",
+      "models": [
+        {
+          "name": "Merry Fisher 895",
+          "notes": null
+        },
+        {
+          "name": "NC 1095",
+          "notes": null
+        },
+        {
+          "name": "Leader 36",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Monte Carlo Yachts",
+      "models": [
+        {
+          "name": "MCY 70",
+          "notes": null
+        },
+        {
+          "name": "MCY 76",
+          "notes": null
+        },
+        {
+          "name": "MCY 86",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Numarine",
+      "models": [
+        {
+          "name": "26XP",
+          "notes": null
+        },
+        {
+          "name": "32XP",
+          "notes": null
+        },
+        {
+          "name": "37XP",
+          "notes": null
+        },
+        {
+          "name": "78 Flybridge",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Pershing",
+      "models": [
+        {
+          "name": "5X",
+          "notes": null
+        },
+        {
+          "name": "6X",
+          "notes": null
+        },
+        {
+          "name": "8X",
+          "notes": null
+        },
+        {
+          "name": "9X",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Princess Yachts",
+      "models": [
+        {
+          "name": "V50",
+          "notes": null
+        },
+        {
+          "name": "V55",
+          "notes": null
+        },
+        {
+          "name": "V60",
+          "notes": null
+        },
+        {
+          "name": "F50",
+          "notes": null
+        },
+        {
+          "name": "F58",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Riva",
+      "models": [
+        {
+          "name": "56 Rivale",
+          "notes": null
+        },
+        {
+          "name": "76 Perseo",
+          "notes": null
+        },
+        {
+          "name": "88 Folgore",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Sanlorenzo",
+      "models": [
+        {
+          "name": "SL96",
+          "notes": null
+        },
+        {
+          "name": "SD90",
+          "notes": null
+        },
+        {
+          "name": "SX88",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "MOTORYACHT",
+      "name": "Sunseeker",
+      "models": [
+        {
+          "name": "Manhattan 52",
+          "notes": null
+        },
+        {
+          "name": "Predator 57",
+          "notes": null
+        },
+        {
+          "name": "Manhattan 66",
+          "notes": null
+        },
+        {
+          "name": "Predator 74",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Brig Inflatables",
+      "models": [
+        {
+          "name": "Eagle 6",
+          "notes": null
+        },
+        {
+          "name": "Falcon 600",
+          "notes": null
+        },
+        {
+          "name": "Navigator 610",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Capelli",
+      "models": [
+        {
+          "name": "Tempest 750",
+          "notes": null
+        },
+        {
+          "name": "Tempest 850",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Highfield",
+      "models": [
+        {
+          "name": "Sport 600",
+          "notes": null
+        },
+        {
+          "name": "Sport 650",
+          "notes": null
+        },
+        {
+          "name": "Patrol 750",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Joker Boat",
+      "models": [
+        {
+          "name": "Clubman 22",
+          "notes": null
+        },
+        {
+          "name": "Coaster 650",
+          "notes": null
+        },
+        {
+          "name": "Barracuda 750",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Quicksilver",
+      "models": [
+        {
+          "name": "Activ 455",
+          "notes": null
+        },
+        {
+          "name": "Activ 505",
+          "notes": null
+        },
+        {
+          "name": "Activ 555",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Williams Jet Tenders",
+      "models": [
+        {
+          "name": "TurboJet 285",
+          "notes": null
+        },
+        {
+          "name": "TurboJet 325",
+          "notes": null
+        },
+        {
+          "name": "Dieseljet 460",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "RIB",
+      "name": "Zodiac",
+      "models": [
+        {
+          "name": "Medline 7.5",
+          "notes": null
+        },
+        {
+          "name": "Open 6.5",
+          "notes": null
+        },
+        {
+          "name": "Pro 6.5",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Bavaria Yachts",
+      "models": [
+        {
+          "name": "Cruiser 34",
+          "notes": null
+        },
+        {
+          "name": "Cruiser 37",
+          "notes": null
+        },
+        {
+          "name": "Cruiser 42",
+          "notes": null
+        },
+        {
+          "name": "Cruiser 46",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Beneteau",
+      "models": [
+        {
+          "name": "Oceanis 31",
+          "notes": null
+        },
+        {
+          "name": "Oceanis 38",
+          "notes": null
+        },
+        {
+          "name": "Oceanis 46.1",
+          "notes": null
+        },
+        {
+          "name": "Oceanis 51.1",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Catana (Katamaran)",
+      "models": [
+        {
+          "name": "42",
+          "notes": null
+        },
+        {
+          "name": "53",
+          "notes": null
+        },
+        {
+          "name": "65",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Dufour",
+      "models": [
+        {
+          "name": "360 Grand Large",
+          "notes": null
+        },
+        {
+          "name": "430 Grand Large",
+          "notes": null
+        },
+        {
+          "name": "530 Grand Large",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Elan",
+      "models": [
+        {
+          "name": "Impression 40",
+          "notes": null
+        },
+        {
+          "name": "Impression 45",
+          "notes": null
+        },
+        {
+          "name": "GT5",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Fountaine Pajot (Katamaran)",
+      "models": [
+        {
+          "name": "Astrea 42",
+          "notes": null
+        },
+        {
+          "name": "Saona 47",
+          "notes": null
+        },
+        {
+          "name": "Bali 4.4",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Hanse",
+      "models": [
+        {
+          "name": "348",
+          "notes": null
+        },
+        {
+          "name": "388",
+          "notes": null
+        },
+        {
+          "name": "458",
+          "notes": null
+        },
+        {
+          "name": "508",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Jeanneau",
+      "models": [
+        {
+          "name": "Sun Odyssey 349",
+          "notes": null
+        },
+        {
+          "name": "Sun Odyssey 410",
+          "notes": null
+        },
+        {
+          "name": "Sun Odyssey 490",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Lagoon (Katamaran)",
+      "models": [
+        {
+          "name": "40",
+          "notes": null
+        },
+        {
+          "name": "42",
+          "notes": null
+        },
+        {
+          "name": "46",
+          "notes": null
+        },
+        {
+          "name": "50",
+          "notes": null
+        },
+        {
+          "name": "55",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Nautitech (Katamaran)",
+      "models": [
+        {
+          "name": "40 Open",
+          "notes": null
+        },
+        {
+          "name": "44 Open",
+          "notes": null
+        },
+        {
+          "name": "46 Open",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "Oceanis Yacht 54",
+      "models": [
+        {
+          "name": "54",
+          "notes": null
+        }
+      ]
+    },
+    {
+      "category": "SAILBOAT_CATAMARAN",
+      "name": "X-Yachts",
+      "models": [
+        {
+          "name": "X4.3",
+          "notes": null
+        },
+        {
+          "name": "X4.6",
+          "notes": null
+        },
+        {
+          "name": "Xc 45",
+          "notes": null
+        }
+      ]
+    }
+  ]
+}

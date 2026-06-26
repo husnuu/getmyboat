@@ -1,5 +1,5 @@
 import { boatRepository } from "@getyourboat/database";
-import type { AuthUser } from "../../plugins/supabase-auth.js";
+import type { AuthUser } from "../../plugins/captain-auth.js";
 import { forbidden, notFound } from "../../lib/errors.js";
 
 /**

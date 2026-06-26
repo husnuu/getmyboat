@@ -1,5 +1,5 @@
-import { Check } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, faCheck } from "../icons";
 
 export interface StepperItem {
   id: string;
@@ -47,7 +47,11 @@ export function Stepper({ steps, activeId, onSelect, className }: StepperProps) 
                       : "border-gray-300 text-gray-500"
                 )}
               >
-                {step.done && !active ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                {step.done && !active ? (
+                  <FontAwesomeIcon icon={faCheck} className="text-[12px]" />
+                ) : (
+                  i + 1
+                )}
               </span>
               <span
                 className={cn(

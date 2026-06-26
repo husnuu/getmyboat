@@ -1,27 +1,29 @@
 "use client";
 
-import {
-  Anchor,
-  CalendarDays,
-  ChevronDown,
-  LayoutDashboard,
-  LogOut,
-  MessageSquare,
-  Percent,
-  Scale,
-  Settings,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { NavItem, Sidebar, SidebarBrand, cn } from "@getyourboat/ui";
+import {
+  NavItem,
+  Sidebar,
+  SidebarBrand,
+  faAnchor,
+  faCalendarDays,
+  faGaugeHigh,
+  faRightFromBracket,
+  faComments,
+  faPercent,
+  faStar,
+  faWallet,
+  faScaleBalanced,
+  faGear,
+  type IconDefinition,
+} from "@getyourboat/ui";
 import { useAuth } from "../auth-provider";
 
 export type SidebarKey =
   | "dashboard"
   | "messages"
   | "boats"
+  | "experiences"
   | "calendar"
   | "discounts"
   | "payments"
@@ -31,34 +33,24 @@ export type SidebarKey =
 interface NavLink {
   key: SidebarKey;
   label: string;
-  icon: LucideIcon;
+  icon: IconDefinition;
   href: string;
-  children?: { key: string; label: string; href: string }[];
 }
 
 const PRIMARY: NavLink[] = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { key: "messages", label: "Messages", icon: MessageSquare, href: "/messages" },
-  {
-    key: "boats",
-    label: "Manage Boats",
-    icon: Anchor,
-    href: "/boats",
-    children: [
-      { key: "boats-all", label: "All Boats", href: "/boats" },
-      { key: "boats-new", label: "Add Boat", href: "/boats/new" },
-    ],
-  },
-  { key: "calendar", label: "Calendar", icon: CalendarDays, href: "/calendar" },
-  { key: "discounts", label: "Discounts", icon: Percent, href: "/discounts" },
-  { key: "payments", label: "Payments", icon: Wallet, href: "/payments" },
-  { key: "legal", label: "Legal & Payout", icon: Scale, href: "/legal" },
+  { key: "dashboard", label: "Ana Sayfa", icon: faGaugeHigh, href: "/" },
+  { key: "messages", label: "Mesajlar", icon: faComments, href: "/messages" },
+  { key: "boats", label: "Teknelerim", icon: faAnchor, href: "/boats" },
+  { key: "experiences", label: "Deneyimler", icon: faStar, href: "/experiences" },
+  { key: "calendar", label: "Takvim", icon: faCalendarDays, href: "/calendar" },
+  { key: "discounts", label: "İndirimler", icon: faPercent, href: "/discounts" },
+  { key: "payments", label: "Ödemeler", icon: faWallet, href: "/payments" },
+  { key: "legal", label: "Yasal & Ödeme", icon: faScaleBalanced, href: "/legal" },
 ];
 
 export function CaptainSidebar({ active }: { active: SidebarKey }) {
   const router = useRouter();
   const { signOut } = useAuth();
-  const [boatsOpen, setBoatsOpen] = useState(active === "boats");
 
   const go = (href: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,72 +64,37 @@ export function CaptainSidebar({ active }: { active: SidebarKey }) {
       </SidebarBrand>
 
       <nav className="flex flex-1 flex-col gap-1">
-        {PRIMARY.map((item) =>
-          item.children ? (
-            <div key={item.key}>
-              <NavItem
-                href={item.href}
-                icon={item.icon}
-                active={active === item.key}
-                onClick={(e) => {
-                  e.preventDefault();
-                  setBoatsOpen((v) => !v);
-                }}
-                aria-expanded={boatsOpen}
-              >
-                <span className="flex-1">{item.label}</span>
-                <ChevronDown
-                  className={cn("h-4 w-4 transition-transform", boatsOpen && "rotate-180")}
-                  aria-hidden
-                />
-              </NavItem>
-              {boatsOpen ? (
-                <div className="ml-7 mt-1 flex flex-col gap-1 border-l border-white/10 pl-2">
-                  {item.children.map((child) => (
-                    <a
-                      key={child.key}
-                      href={child.href}
-                      onClick={go(child.href)}
-                      className="rounded-lg px-3 py-1.5 text-body-sm text-gray-300 transition hover:bg-white/5 hover:text-white"
-                    >
-                      {child.label}
-                    </a>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <NavItem
-              key={item.key}
-              href={item.href}
-              icon={item.icon}
-              active={active === item.key}
-              onClick={go(item.href)}
-            >
-              {item.label}
-            </NavItem>
-          )
-        )}
+        {PRIMARY.map((item) => (
+          <NavItem
+            key={item.key}
+            href={item.href}
+            icon={item.icon}
+            active={active === item.key}
+            onClick={go(item.href)}
+          >
+            {item.label}
+          </NavItem>
+        ))}
       </nav>
 
       <div className="mt-2 border-t border-white/10 pt-2">
         <NavItem
           href="/profile"
-          icon={Settings}
+          icon={faGear}
           active={active === "profile"}
           onClick={go("/profile")}
         >
-          Profile Settings
+          Profil Ayarları
         </NavItem>
         <NavItem
           href="#"
-          icon={LogOut}
+          icon={faRightFromBracket}
           onClick={(e) => {
             e.preventDefault();
             void signOut();
           }}
         >
-          Log out
+          Çıkış
         </NavItem>
       </div>
     </Sidebar>

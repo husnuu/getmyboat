@@ -13,13 +13,27 @@ export async function onboardingConfigRoutes(app: FastifyInstance) {
   app.get("/onboarding/document-types", () => lookup.getDocumentTypes());
 
   app.get("/onboarding/fields", (req) => {
-    const { type, section, package: pkg } = req.query as {
+    const { type, section, package: pkg, packages } = req.query as {
       type?: string;
       section?: string;
       package?: string;
+      packages?: string;
     };
-    return lookup.getFields({ type, section, package: pkg });
+    const packageList = packages
+      ? packages.split(",").map((p) => p.trim()).filter(Boolean)
+      : undefined;
+    return lookup.getFields({ type, section, package: pkg, packages: packageList });
   });
 
-  app.get("/onboarding/config", () => lookup.getConfig());
+  app.get("/onboarding/config", (req) => {
+    const { listingModelKeys } = req.query as { listingModelKeys?: string };
+    if (listingModelKeys) {
+      const keys = listingModelKeys
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
+      if (keys.length > 0) return lookup.getResolvedConfig(keys);
+    }
+    return lookup.getConfig();
+  });
 }

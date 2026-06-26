@@ -93,6 +93,13 @@ export interface OnboardingConfigDTO {
   documentTypes: DocumentTypeDTO[];
 }
 
+/** Config filtered to required fields for the captain's selected listing models. */
+export interface ResolvedOnboardingConfigDTO extends OnboardingConfigDTO {
+  packages: string[];
+  requiredFieldKeys: string[];
+  fields: OnboardingFieldDTO[];
+}
+
 /* ------------------------------- Boat state ------------------------------- */
 
 export interface BoatPhotoDTO {
@@ -144,6 +151,7 @@ export interface BoatDocumentDTO {
   id: string;
   documentTypeKey: string;
   documentTypeLabel: string;
+  fileName: string;
   status: DocumentStatus;
   publicUrl: string | null;
   rejectionReason: string | null;
@@ -152,6 +160,8 @@ export interface BoatDocumentDTO {
 
 export interface BoatProgressDTO {
   currentStep: OnboardingStep;
+  /** Furthest wizard step the captain has reached (autosave); never moves backward. */
+  activeStep: OnboardingStep;
   completedSteps: OnboardingStep[];
   isReadyForReview: boolean;
 }
@@ -167,7 +177,7 @@ export interface SerializedBoatDTO {
   rulesText: string | null;
   checkInNotes: string | null;
   checkOutNotes: string | null;
-  structuredRules: Record<string, boolean> | null;
+  structuredRules: Record<string, boolean | string | number | null> | null;
   progress: BoatProgressDTO;
   listingModels: ListingModelOptionDTO[];
   features: BoatFeatureValueDTO[];
@@ -176,17 +186,21 @@ export interface SerializedBoatDTO {
   pricing: BoatPricingDTO[];
   extras: BoatExtraDTO[];
   documents: BoatDocumentDTO[];
+  engineType: import("../enums").EngineType | null;
+  cabinConfigurations: import("./cabin").CabinConfigurationDTO[];
   submittedAt: string | Date | null;
   reviewedAt: string | Date | null;
   rejectionReason: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
+  lastSavedAt: string | Date | null;
 }
 
 export interface BoatListItemDTO {
   id: string;
   title: string | null;
   status: BoatStatus;
+  approvalType: ApprovalType;
   currentStep: OnboardingStep;
   photos: BoatPhotoDTO[];
   boatType: BoatTypeOptionDTO | null;
@@ -209,4 +223,10 @@ export interface ApiErrorDTO {
 
 export interface ListResponse<T> {
   items: T[];
+}
+
+/** Autosave draft patch — partial step data, no required-field validation. */
+export interface BoatDraftPatchDTO {
+  step: import("../enums").OnboardingStep;
+  data: Record<string, unknown>;
 }

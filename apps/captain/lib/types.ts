@@ -13,6 +13,7 @@ export type {
   AmenityCategoryDTO as AmenityCategory,
   DocumentTypeDTO as DocumentType,
   OnboardingConfigDTO as OnboardingConfig,
+  ResolvedOnboardingConfigDTO as ResolvedOnboardingConfig,
   BoatPhotoDTO as BoatPhoto,
   SerializedBoatDTO as SerializedBoat,
   BoatListItemDTO as BoatListItem,

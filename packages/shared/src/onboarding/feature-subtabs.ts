@@ -1,0 +1,43 @@
+/** Konum adımında gösterilen alanlar (tek kaynak: BoatFeatureValue). */
+export const LOCATION_FIELD_KEYS = [
+  "country",
+  "region",
+  "city",
+  "marina",
+] as const;
+export type LocationFieldKey = (typeof LOCATION_FIELD_KEYS)[number];
+
+/** Motor alt sekmesindeki teknik alanlar. */
+export const ENGINE_FIELD_KEYS = [
+  "total_engine_power_hp",
+  "number_of_engines",
+  "fuel_tank_capacity",
+  "fuel_consumption",
+  "engine_type_brand",
+  "fuel_type",
+  "max_speed",
+] as const;
+
+/** Kabin sekmesinde en üstte gösterilen mürettebat alanı. */
+export const CREW_TAB_FIELD_KEYS = ["number_of_crew_members"] as const;
+
+export const FEATURE_CABIN_SECTIONS = ["cabins", "bathrooms", "crew"] as const;
+
+export type FeatureSubTabId = "specs" | "engine" | "cabins";
+
+export const FEATURE_SUB_TABS: { id: FeatureSubTabId; label: string }[] = [
+  { id: "specs", label: "Tekne Özellikleri" },
+  { id: "engine", label: "Motor" },
+  { id: "cabins", label: "Kabin + Tuvalet" },
+];
+
+export function isLocationFieldKey(key: string): key is LocationFieldKey {
+  return (LOCATION_FIELD_KEYS as readonly string[]).includes(key);
+}
+
+export function classifyFeatureSubTab(key: string, groupKey: string): FeatureSubTabId {
+  if ((CREW_TAB_FIELD_KEYS as readonly string[]).includes(key)) return "cabins";
+  if ((ENGINE_FIELD_KEYS as readonly string[]).includes(key)) return "engine";
+  if ((FEATURE_CABIN_SECTIONS as readonly string[]).includes(groupKey)) return "cabins";
+  return "specs";
+}

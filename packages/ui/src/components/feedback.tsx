@@ -1,7 +1,13 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 import { cn } from "../lib/cn";
+import {
+  FontAwesomeIcon,
+  faCircleInfo,
+  faCircleCheck,
+  faTriangleExclamation,
+  faCircleXmark,
+} from "../icons";
 
 export function Spinner({ className }: { className?: string }) {
   return (
@@ -32,10 +38,10 @@ const alertVariants = cva(
 );
 
 const alertIcon = {
-  info: Info,
-  success: CheckCircle2,
-  warning: AlertTriangle,
-  danger: XCircle,
+  info: faCircleInfo,
+  success: faCircleCheck,
+  warning: faTriangleExclamation,
+  danger: faCircleXmark,
 } as const;
 
 export interface AlertProps
@@ -43,10 +49,10 @@ export interface AlertProps
     VariantProps<typeof alertVariants> {}
 
 export function Alert({ className, variant, children, ...props }: AlertProps) {
-  const Icon = alertIcon[variant ?? "danger"];
+  const icon = alertIcon[variant ?? "danger"];
   return (
     <div className={cn(alertVariants({ variant }), className)} {...props}>
-      <Icon className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <FontAwesomeIcon icon={icon} className="mt-0.5 shrink-0 text-[14px]" aria-hidden />
       <div>{children}</div>
     </div>
   );

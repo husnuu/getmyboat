@@ -6,14 +6,14 @@ import { Spinner } from "./ui";
 import { useAuth } from "./auth-provider";
 
 export function Protected({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !session) router.replace("/login");
-  }, [loading, session, router]);
+    if (!loading && !user) router.replace("/login");
+  }, [loading, user, router]);
 
-  if (loading || !session) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Spinner className="h-6 w-6" />

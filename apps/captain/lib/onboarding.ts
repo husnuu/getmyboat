@@ -6,12 +6,13 @@ export { STEP_ORDER, stepIndex };
 
 export const STEP_LABELS: Record<OnboardingStep, string> = {
   LISTING_MODEL: "Kiralama Modeli",
-  BOAT_TYPE_FEATURES: "Tekne Tipi & Özellikler",
+  BOAT_TYPE_FEATURES: "Özellikler",
   AMENITIES: "Donanımlar",
-  DESCRIPTION_RULES: "Açıklama & Kurallar",
+  LOCATION: "Konum",
+  DESCRIPTION_RULES: "Açıklama",
   PHOTOS: "Fotoğraflar",
-  PRICING: "Fiyatlandırma",
-  DOCUMENTS: "Belgeler",
+  PRICING: "Fiyat",
+  DOCUMENTS: "Dokümanlar",
 };
 
 export const STATUS_LABELS: Record<BoatStatus, string> = {

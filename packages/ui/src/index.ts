@@ -1,5 +1,7 @@
 export { cn } from "./lib/cn";
 
+export * from "./icons";
+
 export { Button, buttonVariants, type ButtonProps } from "./components/button";
 export {
   Card,
@@ -21,6 +23,7 @@ export {
   type SelectProps,
 } from "./components/form";
 export { Spinner, Alert, type AlertProps } from "./components/feedback";
+export { FormErrorBanner, type FormErrorBannerProps } from "./components/form-error-banner";
 export { Modal, type ModalProps } from "./components/modal";
 export {
   Sidebar,
@@ -58,3 +61,11 @@ export {
   type StepperItem,
   type StepperProps,
 } from "./components/stepper";
+export {
+  BoatDetailView,
+  type BoatDetailViewProps,
+} from "./components/boat-detail-view";
+export {
+  BoatPreviewBanner,
+  type BoatPreviewBannerProps,
+} from "./components/boat-preview-banner";

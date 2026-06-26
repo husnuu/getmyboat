@@ -1,11 +1,11 @@
 import * as React from "react";
-import type { LucideIcon } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, type IconDefinition } from "../icons";
 
 export interface TabItem {
   id: string;
   label: string;
-  icon?: LucideIcon;
+  icon?: IconDefinition;
   badge?: React.ReactNode;
 }
 
@@ -33,7 +33,6 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps) {
     <div role="tablist" className={cn("flex flex-wrap gap-2", className)}>
       {items.map((tab, i) => {
         const active = tab.id === activeId;
-        const Icon = tab.icon;
         return (
           <button
             key={tab.id}
@@ -51,7 +50,9 @@ export function Tabs({ items, activeId, onChange, className }: TabsProps) {
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200"
             )}
           >
-            {Icon ? <Icon className="h-4 w-4" aria-hidden /> : null}
+            {tab.icon ? (
+              <FontAwesomeIcon icon={tab.icon} className="text-[14px]" aria-hidden />
+            ) : null}
             {tab.label}
             {tab.badge}
           </button>

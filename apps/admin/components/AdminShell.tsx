@@ -1,0 +1,168 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FontAwesomeIcon, faGlobe, faCircleQuestion, cn, buttonVariants } from "@getyourboat/ui";
+import { clearAdminToken } from "../lib/auth";
+
+const LOCALES = [
+  { value: "tr", label: "Türkçe", short: "TR" },
+  { value: "en", label: "English", short: "EN" },
+] as const;
+
+type Locale = (typeof LOCALES)[number]["value"];
+const STORAGE_KEY = "gyb-admin-locale";
+
+function readLocale(): Locale {
+  if (typeof window === "undefined") return "tr";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === "en" ? "en" : "tr";
+}
+
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (!ref.current?.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [ref, onClose]);
+}
+
+export function AdminTopBar() {
+  const router = useRouter();
+  const [locale, setLocale] = useState<Locale>("tr");
+  const [langOpen, setLangOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+  const helpRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const initial = readLocale();
+    setLocale(initial);
+    document.documentElement.lang = initial;
+  }, []);
+
+  const closeAll = useCallback(() => {
+    setLangOpen(false);
+    setHelpOpen(false);
+  }, []);
+
+  useClickOutside(langRef, () => setLangOpen(false));
+  useClickOutside(helpRef, () => setHelpOpen(false));
+
+  function selectLocale(next: Locale) {
+    setLocale(next);
+    localStorage.setItem(STORAGE_KEY, next);
+    document.documentElement.lang = next;
+    closeAll();
+  }
+
+  function logout() {
+    clearAdminToken();
+    router.push("/login");
+  }
+
+  return (
+    <header className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <Link href="/" className="text-subheading font-bold text-brand-700">
+          GetYourBoat <span className="text-ink">Admin</span>
+        </Link>
+
+        <div className="flex items-center gap-1 sm:gap-2">
+          <div className="relative" ref={langRef}>
+            <button
+              type="button"
+              aria-expanded={langOpen}
+              onClick={() => {
+                setHelpOpen(false);
+                setLangOpen((v) => !v);
+              }}
+              className="flex items-center gap-1 rounded-lg px-2 py-2 text-body-sm font-medium text-gray-600 transition hover:bg-gray-100"
+            >
+              <FontAwesomeIcon icon={faGlobe} className="text-[16px]" />
+              {locale.toUpperCase()}
+            </button>
+            {langOpen ? (
+              <div className="absolute right-0 top-full z-20 mt-1 min-w-[160px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                {LOCALES.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => selectLocale(item.value)}
+                    className={cn(
+                      "flex w-full items-center justify-between px-3 py-2 text-left text-body-sm hover:bg-gray-50",
+                      locale === item.value ? "font-semibold text-brand-600" : "text-gray-700"
+                    )}
+                  >
+                    <span>{item.label}</span>
+                    <span className="text-caption text-gray-400">{item.short}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="relative" ref={helpRef}>
+            <button
+              type="button"
+              aria-expanded={helpOpen}
+              onClick={() => {
+                setLangOpen(false);
+                setHelpOpen((v) => !v);
+              }}
+              className="flex items-center gap-1 rounded-lg px-2 py-2 text-body-sm font-medium text-gray-600 transition hover:bg-gray-100"
+            >
+              <FontAwesomeIcon icon={faCircleQuestion} className="text-[16px]" />
+              <span className="hidden sm:inline">Yardım</span>
+            </button>
+            {helpOpen ? (
+              <div className="absolute right-0 top-full z-20 mt-1 min-w-[220px] rounded-xl border border-gray-200 bg-white py-1 shadow-lg">
+                <Link
+                  href="/brands"
+                  onClick={closeAll}
+                  className="block px-3 py-2 text-body-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Marka / model yönetimi
+                </Link>
+                <Link
+                  href="/brand-model-requests"
+                  onClick={closeAll}
+                  className="block px-3 py-2 text-body-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Bekleyen talepler
+                </Link>
+                <a
+                  href="mailto:destek@getyourboat.com?subject=GetYourBoat%20Admin%20Destek"
+                  onClick={closeAll}
+                  className="block border-t border-gray-100 px-3 py-2 text-body-sm text-brand-600 hover:bg-gray-50"
+                >
+                  Destek ekibine yaz
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            onClick={logout}
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Çıkış
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+export function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <AdminTopBar />
+      <div>{children}</div>
+    </div>
+  );
+}

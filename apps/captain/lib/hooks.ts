@@ -55,34 +55,68 @@ export function useMyBoats() {
   return useApiQuery<BoatListItem[]>(() => api.myBoats().then((r) => r.items), []);
 }
 
+/** Owner profile for the pre-wizard gate. */
+export function useProfile() {
+  return useApiQuery(() => api.getProfile().then((r) => r.profile), []);
+}
+
 /**
  * Loads config + a single boat for the wizard and exposes a local boat setter
  * so steps can optimistically apply the server's returned state.
+ * Config is re-resolved whenever listing models on the boat change.
  */
 export function useBoatWizard(boatId: string) {
   const [config, setConfig] = useState<OnboardingConfig | null>(null);
-  const [boat, setBoat] = useState<SerializedBoat | null>(null);
+  const [boat, setBoatState] = useState<SerializedBoat | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refreshConfig = useCallback(async (modelKeys: string[]) => {
+    const cfg = await api.getConfig(modelKeys.length > 0 ? modelKeys : undefined);
+    setConfig(cfg);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.getConfig(), api.getBoat(boatId)])
-      .then(([cfg, b]) => {
+    setLoading(true);
+    setError(null);
+    setBoatState(null);
+    setConfig(null);
+
+    api
+      .getBoat(boatId)
+      .then(async (b) => {
         if (cancelled) return;
-        setConfig(cfg);
-        setBoat(b);
+        if (b.id !== boatId) return;
+        setBoatState(b);
+        await refreshConfig(b.listingModels.map((m) => m.key));
       })
-      .catch((err) => setError(errorMessage(err, "Yüklenemedi")));
+      .catch((err) => {
+        if (!cancelled) setError(errorMessage(err, "Yüklenemedi"));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
     return () => {
       cancelled = true;
     };
-  }, [boatId]);
+  }, [boatId, refreshConfig]);
+
+  const setBoat = useCallback(
+    async (b: SerializedBoat) => {
+      setBoatState(b);
+      await refreshConfig(b.listingModels.map((m) => m.key));
+    },
+    [refreshConfig]
+  );
 
   const reload = useCallback(async () => {
     const b = await api.getBoat(boatId);
-    setBoat(b);
+    setBoatState(b);
+    await refreshConfig(b.listingModels.map((m) => m.key));
     return b;
-  }, [boatId]);
+  }, [boatId, refreshConfig]);
 
-  return { config, boat, setBoat, error, reload };
+  return { config, boat, setBoat, error, loading, reload };
 }

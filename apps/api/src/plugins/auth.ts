@@ -15,8 +15,12 @@ declare module "fastify" {
 
 declare module "@fastify/jwt" {
   interface FastifyJWT {
-    payload: { sub: string; role: UserRole; email: string };
-    user: { sub: string; role: UserRole; email: string };
+    payload: {
+      sub: string;
+      role: import("@getyourboat/shared").ProfileRole | import("@getyourboat/shared").UserRole;
+      email?: string;
+    };
+    user: FastifyJWT["payload"];
   }
 }
 
@@ -43,7 +47,7 @@ export const authPlugin = fp(async (app) => {
         } catch {
           return reply.code(401).send({ message: "Unauthorized" });
         }
-        if (roles.length && !roles.includes(req.user.role)) {
+        if (roles.length && !roles.includes(req.user.role as UserRole)) {
           return reply.code(403).send({ message: "Forbidden" });
         }
       }

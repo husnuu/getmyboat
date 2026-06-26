@@ -47,6 +47,7 @@ enum OnboardingStep {
   LISTING_MODEL
   BOAT_TYPE_FEATURES
   AMENITIES
+  LOCATION
   DESCRIPTION_RULES
   PHOTOS
   PRICING
@@ -88,25 +89,136 @@ enum PayoutStatus {
   FAILED
 }
 
-/* ===================== Supabase Auth mirror (profiles) ================= */
-// `id` mirrors auth.users.id. The FK to auth.users + RLS policies are applied
-// via supabase/policies.sql (Prisma does not manage the auth schema).
+enum MessageSenderType {
+  CUSTOMER
+  CAPTAIN
+}
+
+enum ExperienceStatus {
+  DRAFT
+  PENDING_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  ACTIVE
+  PAUSED
+  REJECTED
+}
+
+enum ExperienceCategory {
+  BOAT_TOUR
+  WATER_SPORTS
+  FISHING
+  DIVING_SNORKELING
+  SUNSET_CRUISE
+  PRIVATE_CHARTER_EXPERIENCE
+  WORKSHOP_CLASS
+  OTHER
+}
+
+enum ExperienceStep {
+  CATEGORY
+  TITLE_DESCRIPTION
+  INCLUDED_INFO
+  LOGISTICS
+  PRICING
+  CANCELLATION
+  MEDIA
+}
+
+enum ExperiencePricingType {
+  PER_PERSON
+  PER_GROUP
+}
+
+enum CancellationPolicyType {
+  FREE_24H
+  FREE_48H
+  NON_REFUNDABLE
+  CUSTOM
+}
+
+enum DataSource {
+  MANUAL
+  EXTERNAL_API
+}
+
+enum BrandModelRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BoatBrandCategory {
+  MOTORYACHT
+  SAILBOAT_CATAMARAN
+  GULET
+  RIB
+}
+
+enum CabinType {
+  SINGLE_CABIN
+  DOUBLE_CABIN
+  TWIN_CABIN
+  BUNK_BED
+  THREE_PLUS_BERTHS
+  SALOON
+  SHARED_BATHROOM
+}
+
+enum WcType {
+  EXTERNAL
+  EN_SUITE
+}
+
+enum EngineType {
+  INBOARD
+  OUTBOARD
+  STERN_DRIVE
+  JET_DRIVE
+  ELECTRIC
+  SAIL_NO_ENGINE
+}
+
+/* ===================== Captain profiles (auth + boats) ================= */
+// Standalone captain accounts — email/password auth via apps/api JWT.
 
 model Profile {
-  id        String      @id @db.Uuid
-  email     String?     @unique
-  fullName  String?
-  phone     String?
-  avatarUrl String?
-  role      ProfileRole @default(OWNER)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id           String      @id @default(uuid()) @db.Uuid
+  email        String?     @unique
+  passwordHash String?
+  fullName     String?
+  phone        String?
+  companyName  String?
+  avatarUrl    String?
+  address      String?
+  language     String?     @default("tr")
+  isVerified   Boolean     @default(true)
+  role         ProfileRole @default(OWNER)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   boats            Boat[]         @relation("BoatOwner")
   reviewedBoats    Boat[]         @relation("BoatReviewer")
   reviewedDocs     BoatDocument[] @relation("DocumentReviewer")
+  refreshTokens    RefreshToken[]
+  captainConversations Conversation[] @relation("ConversationCaptain")
+  experiences      Experience[]
+  brandModelRequests BrandModelRequest[]
 
   @@map("profiles")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String   @db.Uuid
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 /* ============================ Config / Lookups ========================= */
@@ -258,6 +370,63 @@ model ListingModelOption {
   @@map("listing_model_options")
 }
 
+/* ========================= Boat brands / models (lookup) ================= */
+
+model BoatBrand {
+  id        String           @id @default(uuid()) @db.Uuid
+  name      String           @unique
+  category  BoatBrandCategory
+  logoUrl   String?
+  isActive  Boolean          @default(true)
+  source    DataSource       @default(MANUAL)
+  createdAt DateTime         @default(now())
+  models    BoatModel[]
+
+  @@index([category])
+  @@map("boat_brands")
+}
+
+model BoatModel {
+  id        String     @id @default(uuid()) @db.Uuid
+  brandId   String     @db.Uuid
+  brand     BoatBrand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name      String
+  notes     String?
+  isActive  Boolean    @default(true)
+  source    DataSource @default(MANUAL)
+  createdAt DateTime   @default(now())
+
+  @@unique([brandId, name])
+  @@map("boat_models")
+}
+
+model BrandModelRequest {
+  id             String                  @id @default(uuid()) @db.Uuid
+  captainId      String                  @db.Uuid
+  captain        Profile                 @relation(fields: [captainId], references: [id], onDelete: Cascade)
+  requestedBrand String
+  requestedModel String?
+  status         BrandModelRequestStatus @default(PENDING)
+  createdAt      DateTime                @default(now())
+
+  @@index([captainId])
+  @@index([status])
+  @@map("brand_model_requests")
+}
+
+model CabinConfiguration {
+  id        String     @id @default(uuid()) @db.Uuid
+  boatId    String
+  boat      Boat       @relation(fields: [boatId], references: [id], onDelete: Cascade)
+  cabinType CabinType
+  wcType    WcType?
+  quantity  Int        @default(1)
+  createdAt DateTime   @default(now())
+
+  @@index([boatId])
+  @@map("cabin_configurations")
+}
+
 /* ============================ Boats (operational) ===================== */
 
 model Boat {
@@ -271,6 +440,7 @@ model Boat {
   // Step 2 — Boat type & technical features
   boatTypeKey String?
   boatType    BoatTypeOption? @relation(fields: [boatTypeKey], references: [key])
+  engineType  EngineType?
 
   // Step 4 — Description & rules
   title          String?
@@ -283,8 +453,10 @@ model Boat {
   // Status & onboarding progress
   status            BoatStatus       @default(DRAFT)
   currentStep       OnboardingStep   @default(LISTING_MODEL)
+  activeStep        OnboardingStep   @default(LISTING_MODEL)
   completedSteps    OnboardingStep[] @default([])
   isReadyForReview  Boolean          @default(false)
+  lastSavedAt       DateTime?
 
   // Review workflow
   submittedAt     DateTime?
@@ -305,16 +477,72 @@ model Boat {
   seasonalPrices BoatSeasonalPrice[]
   extras        BoatExtra[]
   documents     BoatDocument[]
+  cabinConfigurations CabinConfiguration[]
 
   // Legacy marketplace relations (phase 0)
   reservations  Reservation[]
   reviews       Review[]
-  conversations Conversation[]
 
   @@index([ownerId])
   @@index([status])
   @@index([boatTypeKey])
   @@map("boats")
+}
+
+/* ============================ Experiences ============================= */
+
+model Experience {
+  id                    String                @id @default(uuid()) @db.Uuid
+  captainId             String                @db.Uuid
+  captain               Profile               @relation(fields: [captainId], references: [id], onDelete: Cascade)
+  status                ExperienceStatus      @default(DRAFT)
+  currentStep           ExperienceStep        @default(CATEGORY)
+  completedSteps        ExperienceStep[]      @default([])
+
+  category              ExperienceCategory?
+  title                 String                @default("")
+  shortDescription      String                @default("")
+  fullDescription       String                @default("")
+  highlights            String[]              @default([])
+  keywords              String[]              @default([])
+
+  included              String[]              @default([])
+  notIncluded           String[]              @default([])
+  notAllowed            String[]              @default([])
+  knowBeforeYouGo       String[]              @default([])
+  emergencyContactPhone String?
+
+  durationMinutes       Int                   @default(60)
+  meetingPoint          String                @default("")
+  meetingPointLat       Float?
+  meetingPointLng       Float?
+  meetingTime           String                @default("")
+  languages             String[]              @default([])
+  minParticipants       Int                   @default(1)
+  maxParticipants       Int                   @default(10)
+  requiredEquipment     String[]              @default([])
+  accessibilityInfo     String?
+
+  basePrice             Decimal               @default(0) @db.Decimal(10, 2)
+  currency              String                @default("EUR")
+  pricingType           ExperiencePricingType @default(PER_PERSON)
+  childDiscountPercent  Int?
+
+  cancellationPolicy     CancellationPolicyType @default(FREE_24H)
+  cancellationPolicyText String?
+
+  coverPhotoUrl         String                @default("")
+  photoUrls             String[]              @default([])
+  videoUrl              String?
+
+  reviewNote            String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([captainId])
+  @@index([status])
+  @@index([category])
+  @@map("experiences")
 }
 
 /// Which listing models a boat supports (hourly + daily, etc.).
@@ -456,10 +684,7 @@ model User {
   captainProfile CaptainProfile?
   reservations   Reservation[]   @relation("CustomerReservations")
   reviews        Review[]
-  sentMessages   Message[]       @relation("MessageSender")
-
   customerConversations Conversation[] @relation("ConversationCustomer")
-  captainConversations  Conversation[] @relation("ConversationCaptain")
 
   @@index([role])
 }
@@ -495,6 +720,7 @@ model Reservation {
   payment Payment?
   payout  Payout?
   review  Review?
+  conversation Conversation?
 
   @@index([boatId])
   @@index([customerId])
@@ -533,34 +759,35 @@ model Payout {
 }
 
 model Conversation {
-  id         String   @id @default(cuid())
-  customerId String
-  customer   User     @relation("ConversationCustomer", fields: [customerId], references: [id])
-  captainId  String
-  captain    User     @relation("ConversationCaptain", fields: [captainId], references: [id])
-  boatId     String?
-  boat       Boat?    @relation(fields: [boatId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(cuid())
+  reservationId String   @unique
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  customerId    String
+  customer      User     @relation("ConversationCustomer", fields: [customerId], references: [id])
+  captainId     String   @db.Uuid
+  captain       Profile  @relation("ConversationCaptain", fields: [captainId], references: [id])
+  messages      Message[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  messages Message[]
-
-  @@unique([customerId, captainId, boatId])
   @@index([customerId])
   @@index([captainId])
+  @@map("conversations")
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String            @id @default(cuid())
   conversationId String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
-  sender         User         @relation("MessageSender", fields: [senderId], references: [id])
-  content        String
+  senderType     MessageSenderType
+  body           String
+  attachmentUrl  String?
   readAt         DateTime?
-  createdAt      DateTime     @default(now())
+  createdAt      DateTime          @default(now())
 
-  @@index([conversationId])
+  @@index([conversationId, createdAt])
+  @@map("messages")
 }
 
 model Review {

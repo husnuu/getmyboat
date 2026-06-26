@@ -5,6 +5,7 @@ export const STEP_ORDER: OnboardingStep[] = [
   OnboardingStep.LISTING_MODEL,
   OnboardingStep.BOAT_TYPE_FEATURES,
   OnboardingStep.AMENITIES,
+  OnboardingStep.LOCATION,
   OnboardingStep.DESCRIPTION_RULES,
   OnboardingStep.PHOTOS,
   OnboardingStep.PRICING,
@@ -20,6 +21,7 @@ export const REQUIRED_STEPS: OnboardingStep[] = STEP_ORDER.filter(
 export const STORAGE_BUCKETS = {
   PHOTOS: "boat-photos",
   DOCUMENTS: "boat-documents",
+  EXPERIENCE_PHOTOS: "experience-photos",
 } as const;
 
 export function stepIndex(step: OnboardingStep): number {
@@ -48,4 +50,12 @@ export function computeProgress(
     STEP_ORDER.find((s) => !set.has(s)) ?? OnboardingStep.DOCUMENTS;
   const isReadyForReview = REQUIRED_STEPS.every((s) => set.has(s));
   return { completedSteps: completed, currentStep, isReadyForReview };
+}
+
+/** Keeps the furthest wizard step reached; going back does not shrink activeStep. */
+export function mergeActiveStep(
+  current: OnboardingStep,
+  visited: OnboardingStep
+): OnboardingStep {
+  return stepIndex(visited) > stepIndex(current) ? visited : current;
 }

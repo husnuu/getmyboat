@@ -1,5 +1,5 @@
-import { Check } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, faCheck } from "../icons";
 
 export interface ChecklistItem {
   id: string;
@@ -33,7 +33,7 @@ export function Checklist({ items, activeId, onSelect, className }: ChecklistPro
                   : "border-gray-300 text-transparent"
               )}
             >
-              <Check className="h-3 w-3" />
+              <FontAwesomeIcon icon={faCheck} className="text-[11px]" />
             </span>
             <span
               className={cn(

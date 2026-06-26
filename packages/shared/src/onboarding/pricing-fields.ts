@@ -1,0 +1,219 @@
+import type { FieldValueMap } from "./field-values";
+
+/** Stored in `*_included` when the fee is covered in the listing price. */
+export const INCLUDED_FEE_YES = "yes";
+
+export interface IncludedFeeFieldGroup {
+  includedKey: string;
+  notIncludedKey: string;
+  label: string;
+  feePlaceholder: string;
+}
+
+export const INCLUDED_FEE_FIELD_GROUPS: IncludedFeeFieldGroup[] = [
+  {
+    includedKey: "mooring_fees_included",
+    notIncludedKey: "mooring_fees_not_included",
+    label: "Liman Ücreti",
+    feePlaceholder: "Örn. 50 EUR/gece",
+  },
+  {
+    includedKey: "final_cleaning_included",
+    notIncludedKey: "final_cleaning_not_included",
+    label: "Final Temizlik Ücreti",
+    feePlaceholder: "Örn. 150 EUR",
+  },
+  {
+    includedKey: "transit_log_included",
+    notIncludedKey: "transit_log_not_included",
+    label: "Geçiş Belgesi (Transit Log)",
+    feePlaceholder: "Örn. 200 EUR",
+  },
+];
+
+/** Second half of each included/not-included pair — rendered inside the composite control. */
+export const INCLUDED_FEE_SKIP_KEYS = new Set(
+  INCLUDED_FEE_FIELD_GROUPS.map((g) => g.notIncludedKey)
+);
+
+const includedFeeByIncludedKey = new Map(
+  INCLUDED_FEE_FIELD_GROUPS.map((g) => [g.includedKey, g])
+);
+
+export function getIncludedFeeGroup(includedKey: string): IncludedFeeFieldGroup | undefined {
+  return includedFeeByIncludedKey.get(includedKey);
+}
+
+export type IncludedFeeMode = "included" | "not_included" | "";
+
+export function readIncludedFeePair(
+  values: FieldValueMap,
+  includedKey: string,
+  notIncludedKey: string
+): { mode: IncludedFeeMode; fee: string } {
+  const notVal = String(values[notIncludedKey] ?? "").trim();
+  const incVal = String(values[includedKey] ?? "").trim();
+
+  if (notVal) return { mode: "not_included", fee: notVal };
+
+  if (
+    incVal === INCLUDED_FEE_YES ||
+    incVal.toLowerCase() === "yes" ||
+    incVal.toLowerCase() === "included"
+  ) {
+    return { mode: "included", fee: "" };
+  }
+
+  if (incVal) return { mode: "included", fee: "" };
+
+  return { mode: "", fee: "" };
+}
+
+export function writeIncludedFeePair(
+  mode: "included" | "not_included",
+  fee: string,
+  includedKey: string,
+  notIncludedKey: string
+): Record<string, string> {
+  if (mode === "included") {
+    return { [includedKey]: INCLUDED_FEE_YES, [notIncludedKey]: "" };
+  }
+  return { [includedKey]: "", [notIncludedKey]: fee.trim() };
+}
+
+export const TIME_FIELD_KEYS = new Set([
+  "check_in",
+  "check_out",
+  "check_in_time_day_rental",
+  "check_out_time_day_rental",
+]);
+
+export function toTimeInputValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (/^\d{2}:\d{2}$/.test(trimmed)) return trimmed;
+  const short = trimmed.match(/^(\d{1,2})$/);
+  if (short?.[1]) return `${short[1].padStart(2, "0")}:00`;
+  const withMinutes = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (withMinutes?.[1] && withMinutes[2]) {
+    return `${withMinutes[1].padStart(2, "0")}:${withMinutes[2]}`;
+  }
+  return trimmed;
+}
+
+export const WEEKDAY_OPTIONS = [
+  "Pazartesi",
+  "Salı",
+  "Çarşamba",
+  "Perşembe",
+  "Cuma",
+  "Cumartesi",
+  "Pazar",
+] as const;
+
+export type DurationUnit = "gece" | "gün";
+
+export function parseMinRentalDuration(value: string): { amount: string; unit: DurationUnit } {
+  const trimmed = value.trim();
+  if (!trimmed) return { amount: "", unit: "gece" };
+
+  const match = trimmed.match(/^(\d+)\s*(gece|gün|gun|night|day|days|nights)?/i);
+  if (match?.[1]) {
+    const rawUnit = match[2]?.toLowerCase() ?? "";
+    const unit: DurationUnit =
+      rawUnit.startsWith("g") || rawUnit.startsWith("d") ? "gün" : "gece";
+    return { amount: match[1], unit };
+  }
+
+  const digits = trimmed.replace(/\D/g, "");
+  return { amount: digits, unit: "gece" };
+}
+
+export function formatMinRentalDuration(amount: string, unit: DurationUnit): string {
+  const n = amount.replace(/\D/g, "");
+  if (!n) return "";
+  return `${n} ${unit}`;
+}
+
+export function parseDailyAcUsage(value: string): { hours: string } {
+  const trimmed = value.trim();
+  if (!trimmed) return { hours: "" };
+  const match = trimmed.match(/^(\d+)/);
+  return { hours: match?.[1] ?? trimmed.replace(/\D/g, "") };
+}
+
+export function formatDailyAcUsage(hours: string): string {
+  const n = hours.replace(/\D/g, "");
+  if (!n) return "";
+  return `${n} saat/gün`;
+}
+
+/** Captain-facing Turkish labels for Fiyat adımı booking/pricing fields. */
+export const PRICING_FIELD_LABELS: Record<string, string> = {
+  deposit_type_payment_before: "Depozito Tipi (ön ödeme yüzdesi)",
+  instant_booking: "Anında Rezervasyon",
+  confirmation_required: "Onay Gerekli",
+  cancellation_policy: "İptal Politikası",
+  check_in: "Giriş Saati",
+  check_out: "Çıkış Saati",
+  check_in_time_day_rental: "Giriş Saati (günlük kiralama)",
+  check_out_time_day_rental: "Çıkış Saati (günlük kiralama)",
+  fuel_cost: "Yakıt Ücreti",
+  min_rental_duration: "Minimum Kiralama Süresi",
+  weekly_check_in_out_day: "Haftalık Teslim/Teslim Alma Günü",
+  daily_a_c_usage: "Günlük Klima Kullanımı",
+  boat_rules_and_policies: "Tekne Kuralları ve Politikalar",
+  alcohol_allowed: "Alkol İzni",
+  outside_food_drink_allowed: "Dışarıdan Yiyecek/İçecek İzni",
+  services_dj_photoshoot_decoration_birthday_laser_show_etc: "Ek Hizmetler (DJ, fotoğraf vb.)",
+};
+
+export const PRICING_FIELD_PLACEHOLDERS: Record<string, string> = {
+  boat_rules_and_policies:
+    "Örn. Tekne üzerinde sigara içilmez, evcil hayvan kabul edilmez.",
+  services_dj_photoshoot_decoration_birthday_laser_show_etc:
+    "Örn. DJ, doğum günü süslemesi talep üzerine sağlanır.",
+};
+
+export const LISTING_MODEL_PRICE_LABELS: Record<string, string> = {
+  hourly: "Saatlik Kiralama Ücreti",
+  daily: "Günlük Kiralama Ücreti",
+  overnight: "Gece Konaklama Ücreti",
+  weekly_charter: "Haftalık Kiralama Ücreti",
+};
+
+/** Optional in Fiyat adımı — doldurulmasa da kaydedilebilir. */
+export const OPTIONAL_PRICING_FIELD_KEYS = new Set([
+  "boat_rules_and_policies",
+  "alcohol_allowed",
+  "outside_food_drink_allowed",
+  "services_dj_photoshoot_decoration_birthday_laser_show_etc",
+  "weekly_check_in_out_day",
+  "daily_a_c_usage",
+]);
+
+export const BOOLEAN_BOOKING_FIELD_KEYS = new Set([
+  "alcohol_allowed",
+  "outside_food_drink_allowed",
+]);
+
+export const PRICING_REQUIRED_HINT =
+  "Yıldızlı alanları doldur. Kiralama fiyatları 0’dan büyük olmalı; dahil/değil seçeneklerinden birini işaretle.";
+
+export function extractFileNameFromStoragePath(storagePath: string): string {
+  const segment = storagePath.split("/").pop() ?? storagePath;
+  const dashIndex = segment.indexOf("-");
+  if (dashIndex >= 0) {
+    const name = segment.slice(dashIndex + 1);
+    try {
+      return decodeURIComponent(name);
+    } catch {
+      return name;
+    }
+  }
+  return segment;
+}
+
+export function getListingModelPriceLabel(key: string, fallback: string): string {
+  return LISTING_MODEL_PRICE_LABELS[key] ?? fallback;
+}

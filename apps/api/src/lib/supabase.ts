@@ -28,6 +28,7 @@ export function getSupabaseAdmin(): SupabaseClient {
 
 export const PHOTOS_BUCKET = env.SUPABASE_PHOTOS_BUCKET;
 export const DOCUMENTS_BUCKET = env.SUPABASE_DOCUMENTS_BUCKET;
+export const EXPERIENCE_PHOTOS_BUCKET = env.SUPABASE_EXPERIENCE_PHOTOS_BUCKET;
 
 /** Build the public URL for an object in a public bucket. */
 export function publicUrl(bucket: string, path: string): string {

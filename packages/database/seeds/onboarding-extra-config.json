@@ -4,7 +4,8 @@
     { "key": "motoryacht", "label": "Motoryacht", "sort_order": 1 },
     { "key": "sailboat", "label": "Sailboat", "sort_order": 2 },
     { "key": "catamaran", "label": "Catamaran", "sort_order": 3 },
-    { "key": "gulet", "label": "Gulet", "sort_order": 4 }
+    { "key": "gulet", "label": "Gulet", "sort_order": 4 },
+    { "key": "rib", "label": "RIB / Day Boat", "sort_order": 5 }
   ],
   "listing_models": [
     { "key": "hourly", "label": "Hourly", "sort_order": 1 },

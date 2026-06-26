@@ -58,6 +58,23 @@ export async function boatMediaRoutes(app: FastifyInstance) {
     return service.deletePhoto(idParam(req), photoId);
   });
 
+  app.post("/boats/:id/boat-plan/upload-url", async (req) => {
+    await loadOwnedBoat(idParam(req), req.authUser!);
+    const { fileName } = parseDetailed(photoUploadUrlSchema, req.body);
+    return service.createBoatPlanUploadUrl(idParam(req), fileName);
+  });
+
+  app.post("/boats/:id/boat-plan", async (req) => {
+    await loadOwnedBoat(idParam(req), req.authUser!);
+    const { storagePath } = parseDetailed(registerPhotoSchema, req.body);
+    return service.registerBoatPlan(idParam(req), storagePath);
+  });
+
+  app.delete("/boats/:id/boat-plan", async (req) => {
+    await loadOwnedBoat(idParam(req), req.authUser!);
+    return service.deleteBoatPlan(idParam(req));
+  });
+
   /* ---------------------------- Documents --------------------------- */
 
   app.post("/boats/:id/documents/upload-url", async (req) => {

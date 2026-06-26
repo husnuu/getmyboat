@@ -1,41 +1,10 @@
 -- =====================================================================
 -- Supabase-specific setup: applied AFTER `prisma migrate deploy`.
 -- Prisma does not manage the `auth` schema or RLS. Idempotent: safe to re-run.
+-- Captain signup uses profiles.passwordHash directly — no auth.users FK.
 -- =====================================================================
 
--- 1) Link profiles.id -> auth.users.id and auto-provision a profile row
---    whenever a new auth user is created.
-ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_auth_users_fk;
-ALTER TABLE public.profiles
-  ADD CONSTRAINT profiles_auth_users_fk
-  FOREIGN KEY (id) REFERENCES auth.users (id) ON DELETE CASCADE;
-
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, "fullName", role, "createdAt", "updatedAt")
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data ->> 'full_name', NULL),
-    'OWNER',
-    now(),
-    now()
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- 2) Helper: is the current user an admin?
+-- 1) Helper: is the current user an admin?
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean
 LANGUAGE sql

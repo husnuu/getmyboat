@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
 import { cn } from "../lib/cn";
+import { FontAwesomeIcon, faXmark } from "../icons";
 
 /**
  * Modal / Dialog. Desktop: centered, max-width 560px. Mobile: full-width
@@ -59,7 +59,7 @@ export function Modal({ open, onClose, title, children, footer, className }: Mod
             aria-label="Kapat"
             className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
           >
-            <X className="h-5 w-5" />
+            <FontAwesomeIcon icon={faXmark} className="text-[18px]" />
           </button>
         </div>
         <div className="p-4 sm:p-6">{children}</div>

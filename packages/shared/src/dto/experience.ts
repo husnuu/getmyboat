@@ -1,0 +1,70 @@
+import {
+  ExperienceCategory,
+  ExperiencePricingType,
+  ExperienceStatus,
+  ExperienceStep,
+  CancellationPolicyType,
+} from "../enums";
+
+export interface ExperienceProgressDTO {
+  currentStep: ExperienceStep;
+  completedSteps: ExperienceStep[];
+  isReadyForSubmit: boolean;
+}
+
+export interface ExperienceListItemDTO {
+  id: string;
+  status: ExperienceStatus;
+  category: ExperienceCategory | null;
+  title: string;
+  coverPhotoUrl: string;
+  basePrice: number;
+  currency: string;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface ExperienceDTO {
+  id: string;
+  captainId: string;
+  status: ExperienceStatus;
+  progress: ExperienceProgressDTO;
+  category: ExperienceCategory | null;
+  title: string;
+  shortDescription: string;
+  fullDescription: string;
+  highlights: string[];
+  keywords: string[];
+  included: string[];
+  notIncluded: string[];
+  notAllowed: string[];
+  knowBeforeYouGo: string[];
+  emergencyContactPhone: string | null;
+  durationMinutes: number;
+  meetingPoint: string;
+  meetingPointLat: number | null;
+  meetingPointLng: number | null;
+  meetingTime: string;
+  languages: string[];
+  minParticipants: number;
+  maxParticipants: number;
+  requiredEquipment: string[];
+  accessibilityInfo: string | null;
+  basePrice: number;
+  currency: string;
+  pricingType: ExperiencePricingType;
+  childDiscountPercent: number | null;
+  cancellationPolicy: CancellationPolicyType;
+  cancellationPolicyText: string | null;
+  coverPhotoUrl: string;
+  photoUrls: string[];
+  videoUrl: string | null;
+  reviewNote: string | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+export interface ExperienceAdminListItemDTO extends ExperienceListItemDTO {
+  captainName: string | null;
+  captainEmail: string | null;
+}
